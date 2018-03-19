@@ -185,19 +185,6 @@ class RemoteSerialMonitor(RemoteMonitor):
             RemoteMonitor.test_error(self, 'Command %s failed' %cmd)
         return output
 
-    def serial_cmd_output_v2(self, cmd, echo_cmd=True, verbose=True, timeout=300):
-        output = ''
-        if echo_cmd == True:
-            RemoteMonitor.test_print(self, info=cmd, serial_debug=True)
-        RemoteMonitor.send_cmd(self, cmd)
-        output = RemoteMonitor.rec_data(self, recv_timeout=timeout)
-        output = RemoteMonitor.remove_cmd_echo_blank_space(self, cmd=cmd, output=output)
-        if verbose == True:
-            RemoteMonitor.test_print(self, info=output, serial_debug=True)
-        if re.findall(r'command not found', output) or re.findall(r'-bash', output):
-            RemoteMonitor.test_error(self, 'Command %s failed' %cmd)
-        return output
-
     def serial_get_ip(self):
         ip = ''
         output = ''
