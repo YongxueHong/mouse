@@ -14,33 +14,48 @@ class HostSession(TestCmd):
         self._params = params
         TestCmd.__init__(self, case_id=case_id, params=params)
 
-    def host_cmd(self, cmd, echo_cmd=True):
+    def host_cmd(self, cmd, echo_cmd=True, timeout=600):
         if echo_cmd == True:
             TestCmd.test_print(self,cmd)
-        subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+        sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        endtime = time.time() + timeout
+        while sub.poll() == None:
+            if time.time() > endtime:
+                err_info = 'Fail to run %s under %s sec.' % (cmd, timeout)
+                TestCmd.test_error(self, err_info)
 
     def host_cmd_output(self, cmd, echo_cmd=True, verbose=True, timeout=600):
         output = ''
+        errput = ''
         stdout = []
         stderr = []
         endtime = time.time() + timeout
         if echo_cmd == True:
             TestCmd.test_print(self, cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        while time.time() < endtime:
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while sub.poll() == None:
+            if time.time() > endtime:
+                err_info = 'Fail to run %s under %s sec.' % (cmd, timeout)
+                TestCmd.test_error(self, err_info)
+
+        try:
             output = sub.communicate()[0]
-            if output:
-                break
-        if not output:
-            err_info = 'Command : %s TIMEOUT!!' % cmd
-            TestCmd.test_error(self, err_info)
+        except ValueError:
+            pass
+        try:
+            errput = sub.communicate()[1]
+        except ValueError:
+            pass
+        allput = output + errput
         # Here need to remove command echo and blank space again
-        output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
+        allput = TestCmd.remove_cmd_echo_blank_space(self, output=allput, cmd=cmd)
         if verbose == True:
-            TestCmd.test_print(self, output)
-        return output
+            TestCmd.test_print(self, allput)
+        if re.findall(r'command not found', allput):
+            TestCmd.test_error(self, 'Fail to run %s.'%cmd)
+        return allput
 
     def host_cmd_scp(self, src_file, dst_file, src_ip=None, dst_ip=None, timeout=300):
         cmd = ''
