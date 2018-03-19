@@ -47,3 +47,12 @@ do
     wait
     echo -e "**************************************************************************"
 done
+
+if [ $1 ]
+then
+  ssh root@$1 ntpdate clock.redhat.com
+  echo "update the clock of $1"
+fi
+
+ntpdate clock.redhat.com
+echo "update the clock of local host"
