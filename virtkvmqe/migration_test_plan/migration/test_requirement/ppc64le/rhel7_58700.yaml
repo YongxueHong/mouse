@@ -1,0 +1,93 @@
+test_matrix:
+ interface:
+  virtio-scsi: 'yes'
+  virtio-blk: 'no'
+ backend:
+  iscsi: 'no'
+  local: 'yes'
+  nfs: 'no'
+
+host_passwd: 'kvmautotest'
+guest_passwd: 'kvmautotest'
+
+src_host_ip: '10.16.68.28'
+dst_host_ip: '10.16.67.232'
+
+test_requirement:
+ name:
+  - "Migration - ppc64le"
+
+incoming_port: '4000'
+
+share_images_dir: '/home/yhong/images/'
+
+# qemu command line
+vm_cmd_base:
+ name:
+  - '"yhong-vm"'
+ sandbox:
+  - 'off'
+ machine:
+  - 'pseries'
+ nodefaults:
+  - 'None'
+ vga:
+  - 'std'
+ chardev:
+  - 'socket,id=qmp_id_qmpmonitor1,path=/var/tmp/monitor-qmpmonitor1,server,nowait'
+  - 'socket,id=qmp_id_catch_monitor,path=/var/tmp/monitor-catch_monitor,server,nowait'
+ mon:
+  - 'chardev=qmp_id_qmpmonitor1,mode=control'
+  - 'chardev=qmp_id_catch_monitor,mode=control'
+ device:
+  - 'nec-usb-xhci,id=usb1,bus=pci.0,addr=0x3'
+  - 'virtio-scsi-pci,id=virtio_scsi_pci0,bus=pci.0,addr=0x4'
+  - 'scsi-hd,id=image1,drive=drive_image1'
+  - 'virtio-net-pci,mac=9a:8a:8b:8c:8d:8e,id=net0,vectors=4,netdev=tap0,bus=pci.0,addr=0x5'
+  - 'usb-tablet,id=usb-tablet1,bus=usb1.0,port=1'
+ drive:
+  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file=/home/yhong/images/rhel75-ppc64le-virtio-scsi.qcow2'
+ netdev:
+  - 'tap,id=tap0,vhost=on'
+ m:
+  - '4096'
+ smp:
+  - '4,maxcpus=4,cores=2,threads=1,sockets=2'
+ vnc:
+  - ':10'
+ rtc:
+  - 'base=utc,clock=host'
+ boot:
+  - 'menu=off,strict=off,order=cdn,once=c'
+ enable-kvm:
+  - 'None'
+ qmp:
+  - 'tcp:0:3333,server,nowait'
+ serial:
+  - 'tcp:0:4444,server,nowait'
+ monitor:
+  - 'stdio'
+
+
+test_cases:
+ rhel7_10022:
+  name:
+   - "[migration] Migrate guest via a compressed file"
+ rhel7_10026:
+  name:
+   - "[migration] Do live migrate during vm reboot"
+ rhel7_10031:
+  name:
+   - "[migration] Live migration support in virtio-blk-data-plane"
+ rhel7_10039:
+  name:
+   - "[migration] Do migration after hot plug vdisk"
+ rhel7_10059:
+  name:
+   - "[migration] Ping-pong migration during file transfer"
+
+verbose: 'no'
+
+timeout: '7200'
+
+
