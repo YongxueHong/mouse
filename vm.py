@@ -140,6 +140,8 @@ class TestCmd(Test):
         Test.__init__(self, case_id=case_id, params=params)
 
     def subprocess_cmd_base(self, cmd, echo_cmd=True, verbose=True, enable_output=True, timeout=300):
+        output = ''
+        errput = ''
         current_time = time.time()
         deadline = current_time + timeout
         pid = ''
@@ -147,14 +149,28 @@ class TestCmd(Test):
             Test.test_print(self, cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        while sub.poll() == None:
+            if time.time() > deadline:
+                err_info = 'Fail to run %s under %s sec.' % (cmd, timeout)
+                TestCmd.test_error(self, err_info)
 
         fd = sub.stdout.fileno()
         pid = sub.pid
         if (enable_output == True):
-            output = sub.communicate()[0]
+            try:
+                output = sub.communicate()[0]
+            except ValueError:
+                pass
+            try:
+                errput = sub.communicate()[1]
+            except ValueError:
+                pass
+            allput = output + errput
             if verbose == True:
-                self.test_print(info=output)
-            return output, fd
+                self.test_print(info=allput)
+            if re.findall(r'command not found', allput):
+                TestCmd.test_error(self, 'Fail to run %s.' % cmd)
+            return allput, fd
         elif (enable_output == False):
             return fd, pid
 
