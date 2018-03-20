@@ -68,7 +68,6 @@ vm_cmd_base:
  monitor:
   - 'stdio'
 
-
 test_cases:
  rhel7_10022:
   name:
@@ -82,6 +81,12 @@ test_cases:
  rhel7_10039:
   name:
    - "[migration] Do migration after hot plug vdisk"
+ rhel7_10040:
+  name:
+   - "[migration] Do migration after hot remove vdisk"
+ rhel7_10055:
+  name:
+   - "[migration] Stop VM after migration begins"
  rhel7_10059:
   name:
    - "[migration] Ping-pong migration during file transfer"
