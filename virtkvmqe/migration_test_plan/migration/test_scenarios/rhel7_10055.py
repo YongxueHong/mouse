@@ -10,7 +10,6 @@ import threading
 def run_case(params):
     SRC_HOST_IP = params.get('src_host_ip')
     DST_HOST_IP = params.get('dst_host_ip')
-    #src_qemu_cmd = params.create_qemu_cmd()
     qmp_port = int(params.get('vm_cmd_base')['qmp'][0].split(',')[0].split(':')[2])
     serail_port = int(params.get('vm_cmd_base')['serial'][0].split(',')[0].split(':')[2])
 
@@ -18,11 +17,7 @@ def run_case(params):
     id = test.get_id()
     src_host_session = HostSession(id, params)
     src_qemu_cmd = params.create_qemu_cmd()
-
-
-
     test.main_step_log('1. Boot the guest on source host with ')
-    #src_host_session.boot_guest_v2(cmd=cmd_x86_src, vm_alias='src')
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
 
     src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
@@ -43,7 +38,6 @@ def run_case(params):
 
     params.vm_base_cmd_add('incoming', 'tcp:0:4000')
     dst_qemu_cmd = params.create_qemu_cmd()
-    #src_host_session.boot_remote_guest(ip='10.66.10.208', cmd=cmd_x86_dst, vm_alias='dst')
     src_host_session.boot_remote_guest(ip=DST_HOST_IP, cmd=dst_qemu_cmd, vm_alias='dst')
 
     dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
@@ -115,7 +109,4 @@ def run_case(params):
     output = guest_session.guest_cmd_output(cmd=cmd)
     if re.findall(r'Call Trace:', output) or not output:
         guest_session.test_error('Guest hit call trace')
-    
-    
-
 
