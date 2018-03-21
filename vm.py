@@ -7,10 +7,8 @@ import threading
 import re
 import paramiko
 
-BASE_FILE = os.path.dirname(os.path.abspath(__file__))
-
 class Test():
-    def __init__(self, case_id, params, timeout=3600):
+    def __init__(self, case_id, params):
         self.case_id = case_id
         self.pid_list = []
         self.start_time = time.time()
@@ -76,8 +74,9 @@ class Test():
 
     def test_print(self, info, short_debug=True, serial_debug=False):
         if self.params.get('verbose') == 'yes':
-            print info
-        self.log_echo_file(log_str=info, short_debug=short_debug, serial_debug=serial_debug)
+            print (info)
+        self.log_echo_file(log_str=info, short_debug=short_debug,
+                           serial_debug=serial_debug)
 
     def total_test_time(self, start_time):
         self._passed = True
@@ -87,8 +86,9 @@ class Test():
         elif format == 'min':
             print 'Total of test time :', int(test_time / 60), 'min'
         else:
-            time_info =  'Total of test time : %s min %s sec' % (
-            int(test_time / 60), int(test_time - int(test_time / 60) * 60))
+            time_info =  'Total of test time : %s min %s sec' \
+                         % (int(test_time / 60),
+                            int(test_time - int(test_time / 60) * 60))
             self.test_print(info=time_info)
 
     def open_vnc(self, ip, port, timeout=10):
@@ -139,7 +139,8 @@ class TestCmd(Test):
     def __init__(self, case_id, params):
         Test.__init__(self, case_id=case_id, params=params)
 
-    def subprocess_cmd_base(self, cmd, echo_cmd=True, verbose=True, enable_output=True, timeout=300):
+    def subprocess_cmd_base(self, cmd, echo_cmd=True, verbose=True,
+                            enable_output=True, timeout=300):
         output = ''
         errput = ''
         current_time = time.time()
@@ -199,7 +200,6 @@ class TestCmd(Test):
                 Test.test_print(self, '%s: %s' % (name, s))
         stream.close()
 
-    # refer to /home/yhong/Github-Pycharm/staf-kvm-devel/workspace/lib/python2.7/site-packages/pip/_vendor/distlib/index.py
     def subprocess_cmd_advanced(self, cmd, echo_cmd=True, vm_alias=None):
         pid = ''
         stdout = []
@@ -208,7 +208,8 @@ class TestCmd(Test):
             Test.test_print(self, cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        t1 = threading.Thread(target=self.reader, args=('stdout', sub.stdout, stdout, self._lock, vm_alias))
+        t1 = threading.Thread(target=self.reader,
+                              args=('stdout', sub.stdout, stdout, self._lock, vm_alias))
         t1.daemon = True
         t1.name = 'stdout_thread'
         t1.start()
@@ -243,7 +244,8 @@ class TestCmd(Test):
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=ip, port=22, username='root', timeout=60, password=passwd)
+        ssh.connect(hostname=ip, port=22, username='root',
+                    timeout=60, password=passwd)
         stdin, stdout, stderr = ssh.exec_command(command=cmd, timeout=timeout)
         errput = stderr.read()
         output = stdout.read()
@@ -265,7 +267,8 @@ class CreateTest(Test, TestCmd):
         self.passwd =params.get('host_passwd')
         passed = False
         endtime = time.time() + float(params.get('timeout'))
-        thread = threading.Thread(target=Test.test_timeout_daemon, args=(self, passed, endtime,))
+        thread = threading.Thread(target=Test.test_timeout_daemon,
+                                  args=(self, passed, endtime,))
         thread.name = 'TimeoutThread'
         thread.daemon = True
         thread.start()
@@ -285,11 +288,14 @@ class CreateTest(Test, TestCmd):
         output = ''
 
         if self.dst_ip:
-            src_cmd_check = 'ssh root@%s ps -axu | grep %s | grep -v grep' % (self.dst_ip, self.guest_name)
-            output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False, verbose=False, cmd=src_cmd_check)
+            src_cmd_check = 'ssh root@%s ps -axu | grep %s | grep -v grep' \
+                            % (self.dst_ip, self.guest_name)
+            output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
+                                                    verbose=False, cmd=src_cmd_check)
             if output:
                 pid = re.split(r"\s+", output)[1]
-                info =  'Found a %s dst guest process : pid = %s' % (self.guest_name, pid)
+                info =  'Found a %s dst guest process : pid = %s' \
+                        % (self.guest_name, pid)
                 TestCmd.test_print(self, info)
                 self.kill_dst_guest_process(pid)
             else:
@@ -298,7 +304,8 @@ class CreateTest(Test, TestCmd):
             time.sleep(3)
 
         src_cmd_check = 'ps -axu | grep %s | grep -v grep' % self.guest_name
-        output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False, verbose=False, cmd=src_cmd_check)
+        output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
+                                                verbose=False, cmd=src_cmd_check)
         if output:
             pid = re.split(r"\s+", output)[1]
             info =  'Found a %s guest process : pid = %s' % (self.guest_name, pid)
@@ -323,14 +330,16 @@ class CreateTest(Test, TestCmd):
         Test.test_print(self, '======= Checking host kernel version: =======')
         TestCmd.subprocess_cmd_base(self, cmd='uname -r')
         if self.dst_ip:
-            Test.test_print(self, '======= Checking host kernel version on dst host: =======')
+            Test.test_print(self, '======= Checking host kernel '
+                                  'version on dst host: =======')
             cmd = 'ssh root@%s uname -r' %(self.dst_ip)
             TestCmd.subprocess_cmd_base(self, cmd=cmd)
 
         Test.test_print(self, '======= Checking the version of qemu: =======')
         TestCmd.subprocess_cmd_base(self, cmd='/usr/libexec/qemu-kvm -version')
         if self.dst_ip:
-            Test.test_print(self, '======= Checking the version of qemu on dst host: =======')
+            Test.test_print(self, '======= Checking the version of '
+                                  'qemu on dst host: =======')
             cmd = 'ssh root@%s /usr/libexec/qemu-kvm -version' %(self.dst_ip)
             TestCmd.subprocess_cmd_base(self, cmd=cmd)
 
@@ -341,7 +350,8 @@ class CreateTest(Test, TestCmd):
     def main_step_log(self, log):
         log_tag = '='
         log_tag_rept = 7
-        log_info = '%s Step %s %s' % (log_tag * log_tag_rept, log, log_tag * log_tag_rept)
+        log_info = '%s Step %s %s' % (log_tag * log_tag_rept,
+                                      log, log_tag * log_tag_rept)
         if self.params.get('verbose') == 'yes':
             print log_info
         Test.log_echo_file(self, log_str=log_info)
@@ -349,6 +359,7 @@ class CreateTest(Test, TestCmd):
     def sub_step_log(self, str):
         log_tag = '-'
         log_tag_rept = 5
-        log_info = '%s %s %s' % (log_tag * log_tag_rept, str, log_tag * log_tag_rept)
+        log_info = '%s %s %s' % (log_tag * log_tag_rept,
+                                 str, log_tag * log_tag_rept)
         Test.test_print(self, info=log_info)
 

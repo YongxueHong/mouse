@@ -5,9 +5,6 @@ import sys
 import time
 import traceback
 
-BASE_FILE = os.path.dirname(os.path.abspath(__file__))
-bars = ['|', '/', '-', '\\', '|', '/', '-', '\\']
-
 class Status:
     PASS = "\033[92mPASS\033[00m"
     ERROR = "\033[91mERROR\033[00m"
@@ -35,7 +32,7 @@ class CaseRunner():
         self.get_case_list()
         self._run_result['TOTAL'] = len(self._case_list)
 
-    def dispaly_process_bar(self, processor):
+    def display_process_bar(self, processor):
         sys.stdout.write(' ')
         sys.stdout.flush()
         while processor.is_alive():
@@ -55,12 +52,13 @@ class CaseRunner():
 
     def display_sum_results(self):
         self._run_result['ERROR'] = len(self._run_result['error_cases'])
-        self._run_result['PASS'] = self._run_result['TOTAL'] - self._run_result['ERROR']
+        self._run_result['PASS'] = self._run_result['TOTAL'] \
+                                   - self._run_result['ERROR']
 
-        print '\033[93m%s\033[00m' %('*' * 94)
-        print 'RESULTS [%s]:' %(self._requirement_id.upper().replace('_', '-'))
-        print '==>TOTAL : %s' %(self._run_result['TOTAL'])
-        print '==>PASS : %s ' %(self._run_result['PASS'])
+        print ('\033[93m%s\033[00m' % ('*' * 94))
+        print ('RESULTS [%s]:' % (self._requirement_id.upper().replace('_', '-')))
+        print ('==>TOTAL : %s' % (self._run_result['TOTAL']))
+        print ('==>PASS : %s ' % (self._run_result['PASS']))
         if self._run_result['PASS'] != 0:
             cnt = 1
             for case in self._case_list:
@@ -68,18 +66,22 @@ class CaseRunner():
                     self._run_result['pass_cases'].append(case)
             for pass_case in self._run_result['pass_cases']:
                 print '   %d: %s-%s' % (cnt, pass_case.upper().replace('_', '-'),
-                                        self._params.get('test_cases')[pass_case]['name'][0])
+                                        self._params.get('test_cases')
+                                        [pass_case]['name'][0])
                 cnt = cnt + 1
-        print '==>ERROR : %s ' %(self._run_result['ERROR'])
+        print ('==>ERROR : %s '  %(self._run_result['ERROR']))
         if self._run_result['ERROR'] != 0:
             cnt = 1
             for error_case in self._run_result['error_cases']:
-                print '   %d: \033[91m%s\033[00m-%s' % (cnt, error_case.upper().replace('_', '-'),
-                                        self._params.get('test_cases')[error_case]['name'][0])
+                print ('   %d: \033[91m%s\033[00m-%s'
+                       % (cnt, error_case.upper().replace('_', '-'),
+                          self._params.get('test_cases')[error_case]['name'][0]))
                 cnt = cnt + 1
-        print '==>RUN TIME : %s min %s sec ' % (int(self._run_time / 60), int(self._run_time - int(self._run_time / 60) * 60))
-        print '==>TEST LOG : %s ' %(self._params.get('log_dir'))
-        print '\033[93m%s\033[00m' % ('*' * 94)
+        print ('==>RUN TIME : %s min %s sec '
+               % (int(self._run_time / 60),
+                  int(self._run_time - int(self._run_time / 60) * 60)))
+        print ('==>TEST LOG : %s ' % (self._params.get('log_dir')))
+        print ('\033[93m%s\033[00m' % ('*' * 94))
 
     def _run(self, case, case_queue):
         log_file_list = []
@@ -106,20 +108,24 @@ class CaseRunner():
         cont = 1
         case_queue = multiprocessing.Queue()
         if self._params.get('verbose') == 'no':
-            print '\033[94m%s Test Requirement: %s(%s) %s\033[00m' % \
-                  (('=' * 25), self._requirement_id.upper().replace('_', '-'), self._requirement_name, ('=' * 25),)
+            print ('\033[94m%s Test Requirement: %s(%s) %s\033[00m'
+                   % (('=' * 25), self._requirement_id.upper().replace('_', '-'),
+                      self._requirement_name, ('=' * 25),))
         for case in self._case_list:
             self._sub_start_time = time.time()
             if self._params.get('verbose') == 'no':
-                info = '--> Running case(%s/%s): %s-%s ' % (cont, self._run_result['TOTAL'], case.upper().replace('_', '-'),
-                                                           self._params.get('test_cases')[case]['name'][0])
+                info = '--> Running case(%s/%s): %s-%s ' \
+                       % (cont, self._run_result['TOTAL'],
+                          case.upper().replace('_', '-'),
+                          self._params.get('test_cases')[case]['name'][0])
                 sys.stdout.write(info)
                 sys.stdout.flush()
-            sub_proc = multiprocessing.Process(target=self._run, args=(case, case_queue))
+            sub_proc = multiprocessing.Process(target=self._run,
+                                               args=(case, case_queue))
             sub_proc.start()
             sub_proc.name = case
             if self._params.get('verbose') == 'no':
-                self.dispaly_process_bar(sub_proc)
+                self.display_process_bar(sub_proc)
             sub_proc.join()
 
             self._sub_end_time = time.time()
@@ -129,13 +135,17 @@ class CaseRunner():
             if self._params.get('verbose') == 'no':
                 sys.stdout.write('\b')
                 if case in self._run_result['error_cases']:
-                    info = '(%s min %s sec)--- %s.\n' % (int(self._sub_run_time / 60),
-                                                         int(self._sub_run_time - int(self._sub_run_time / 60) * 60),
-                                             Status.ERROR)
+                    info = '(%s min %s sec)--- %s.\n' \
+                           % (int(self._sub_run_time / 60),
+                              int(self._sub_run_time
+                                  - int(self._sub_run_time / 60) * 60),
+                              Status.ERROR)
                 else:
-                    info = '(%s min %s sec)--- %s.\n' % (int(self._sub_run_time / 60),
-                                                         int(self._sub_run_time - int(self._sub_run_time / 60) * 60),
-                                             Status.PASS)
+                    info = '(%s min %s sec)--- %s.\n' \
+                           % (int(self._sub_run_time / 60),
+                              int(self._sub_run_time
+                                  - int(self._sub_run_time / 60) * 60),
+                              Status.PASS)
                 sys.stdout.write(info)
                 sys.stdout.flush()
             cont = cont + 1

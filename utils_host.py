@@ -1,8 +1,6 @@
 import re
-import os
 import time
 from vm import TestCmd
-import select
 import subprocess
 
 class HostSession(TestCmd):
@@ -28,8 +26,6 @@ class HostSession(TestCmd):
     def host_cmd_output(self, cmd, echo_cmd=True, verbose=True, timeout=600):
         output = ''
         errput = ''
-        stdout = []
-        stderr = []
         endtime = time.time() + timeout
         if echo_cmd == True:
             TestCmd.test_print(self, cmd)
@@ -54,7 +50,7 @@ class HostSession(TestCmd):
         if verbose == True:
             TestCmd.test_print(self, allput)
         if re.findall(r'command not found', allput):
-            TestCmd.test_error(self, 'Fail to run %s.'%cmd)
+            TestCmd.test_error(self, 'Fail to run %s.' % cmd)
         return allput
 
     def host_cmd_scp(self, src_file, dst_file, src_ip=None, dst_ip=None, timeout=300):
@@ -68,7 +64,8 @@ class HostSession(TestCmd):
             cmd = 'scp %s:%s %s' % (src_ip, src_file, dst_file)
             ip = src_ip
         TestCmd.test_print(self, cmd)
-        output, _ = TestCmd.remote_scp(self, ip=ip, cmd=cmd, passwd=self._guest_passwd, timeout=timeout)
+        output, _ = TestCmd.remote_scp(self, ip=ip, cmd=cmd,
+                                       passwd=self._guest_passwd, timeout=timeout)
         # Here need to remove command echo and blank space again
         output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
         if re.findall(r'No such file or directory', output):
@@ -78,7 +75,7 @@ class HostSession(TestCmd):
     def sub_step_log(self, str):
         log_tag = '-'
         log_tag_rept = 5
-        log_info = '%s %s %s' %(log_tag*log_tag_rept, str, log_tag*log_tag_rept)
+        log_info = '%s %s %s' % (log_tag*log_tag_rept, str, log_tag*log_tag_rept)
         TestCmd.test_print(self, info=log_info)
 
     def get_guest_pid(self, cmd, dst_ip=None):
@@ -94,7 +91,8 @@ class HostSession(TestCmd):
         cmd_check = 'ps -axu| grep %s | grep -v grep' % guest_name
         cmd_check_list.append(cmd_check)
         for cmd_check in cmd_check_list:
-            output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False, verbose=False, cmd=cmd_check)
+            output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
+                                                    verbose=False, cmd=cmd_check)
             output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
             if output and not re.findall(r'ssh root', cmd_check):
                 pid = re.split(r"\s+", output)[1]

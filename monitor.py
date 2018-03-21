@@ -1,6 +1,3 @@
-import os, sys
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.extend([BASE_DIR])
 import socket
 import select
 import re
@@ -13,8 +10,10 @@ class RemoteMonitor(Test):
     def __init__(self, case_id, params, ip, port):
         Test.__init__(self, case_id=case_id, params=params)
         self._ip = ip
-        self._qmp_port = int(params.get('vm_cmd_base')['qmp'][0].split(',')[0].split(':')[2])
-        self._serail_port = int(params.get('vm_cmd_base')['serial'][0].split(',')[0].split(':')[2])
+        self._qmp_port = int(params.get('vm_cmd_base')
+                             ['qmp'][0].split(',')[0].split(':')[2])
+        self._serail_port = int(params.get('vm_cmd_base')
+                                ['serial'][0].split(',')[0].split(':')[2])
         self._guest_passwd = params.get('guest_passwd')
         self._port = port
         self.address = (ip, port)
@@ -22,9 +21,11 @@ class RemoteMonitor(Test):
         self._socket.settimeout(self.CONNECT_TIMEOUT)
         try:
             self._socket.connect(self.address)
-            Test.test_print(self, 'Connect to monitor(%s:%s) successfully.' %(ip, port))
+            Test.test_print(self, 'Connect to monitor(%s:%s) successfully.'
+                            % (ip, port))
         except socket.error:
-            Test.test_error(self, 'Fail to connect to monitor(%s:%s).' %(ip, port))
+            Test.test_error(self, 'Fail to connect to monitor(%s:%s).'
+                            % (ip, port))
 
     def __del__(self):
         self._socket.close()
@@ -36,13 +37,15 @@ class RemoteMonitor(Test):
         try:
             return bool(select.select([self._socket], [], [], timeout)[0])
         except socket.error:
-            Test.test_error(self, 'Verifying data on monitor(%s:%s) socket.' % (self._ip, self._port))
+            Test.test_error(self, 'Verifying data on monitor(%s:%s) socket.'
+                            % (self._ip, self._port))
 
     def send_cmd(self, cmd):
         try:
             self._socket.sendall(cmd + '\n')
         except socket.error:
-            Test.test_error(self, 'Fail to send command to monitor(%s:%s).'%(self._ip, self._port))
+            Test.test_error(self, 'Fail to send command to monitor(%s:%s).'
+                            % (self._ip, self._port))
 
     def rec_data(self, recv_timeout=DATA_AVAILABLE_TIMEOUT, max_recv_data=1024):
         s = ''
@@ -52,7 +55,8 @@ class RemoteMonitor(Test):
             try:
                 data = self._socket.recv(max_recv_data)
             except socket.error:
-                Test.test_error(self, 'Fail to receive data from monitor(%s:%s).'%(self._ip, self._port))
+                Test.test_error(self, 'Fail to receive data from monitor(%s:%s).'
+                                % (self._ip, self._port))
                 return s
 
             if not data:
@@ -75,7 +79,8 @@ class RemoteQMPMonitor(RemoteMonitor):
         self._ip = ip
         self._port = port
         self._address = (self._ip, self._port)
-        RemoteMonitor.__init__(self, case_id=case_id, params=params, ip=ip, port=port)
+        RemoteMonitor.__init__(self, case_id=case_id,
+                               params=params, ip=ip, port=port)
         self.qmp_initial()
 
     def qmp_initial(self):
@@ -91,7 +96,8 @@ class RemoteQMPMonitor(RemoteMonitor):
         output = RemoteMonitor.rec_data(self, recv_timeout=3)
         RemoteMonitor.test_print(self, output)
 
-    def qmp_cmd_output(self, cmd, echo_cmd=True, verbose=True, recv_timeout=3, timeout=1800):
+    def qmp_cmd_output(self, cmd, echo_cmd=True, verbose=True,
+                       recv_timeout=3, timeout=1800):
         output =''
         if echo_cmd == True:
             RemoteMonitor.test_print(self, cmd)
@@ -117,7 +123,8 @@ class RemoteSerialMonitor(RemoteMonitor):
         self._port = port
         self._parmas = params
         self._guest_passwd = params.get('guest_passwd')
-        RemoteMonitor.__init__(self, case_id=case_id, ip=ip, port=port, params=params)
+        RemoteMonitor.__init__(self, case_id=case_id, ip=ip,
+                               port=port, params=params)
 
     def serial_login(self, timeout=300):
         output = ''
@@ -138,7 +145,8 @@ class RemoteSerialMonitor(RemoteMonitor):
         RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
         RemoteMonitor.send_cmd(self, self._guest_passwd)
-        RemoteMonitor.test_print(self, info=self._guest_passwd, serial_debug=True)
+        RemoteMonitor.test_print(self, info=self._guest_passwd,
+                                 serial_debug=True)
         output = RemoteMonitor.rec_data(self, recv_timeout=8)
         RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
@@ -150,7 +158,8 @@ class RemoteSerialMonitor(RemoteMonitor):
             RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
             RemoteMonitor.send_cmd(self, self._guest_passwd)
-            RemoteMonitor.test_print(self, info=self._guest_passwd, serial_debug=True)
+            RemoteMonitor.test_print(self, info=self._guest_passwd,
+                                     serial_debug=True)
             output = RemoteMonitor.rec_data(self, recv_timeout=10)
             RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
@@ -165,7 +174,8 @@ class RemoteSerialMonitor(RemoteMonitor):
         RemoteMonitor.test_print(self, info=cmd, serial_debug=True)
         RemoteMonitor.send_cmd(self, cmd)
 
-    def serial_cmd_output(self, cmd, echo_cmd=True, verbose=True, recv_timeout=3, timeout=300):
+    def serial_cmd_output(self, cmd, echo_cmd=True, verbose=True,
+                          recv_timeout=3, timeout=300):
         output = ''
         if echo_cmd == True:
             RemoteMonitor.test_print(self, info=cmd, serial_debug=True)
@@ -178,11 +188,14 @@ class RemoteSerialMonitor(RemoteMonitor):
         if not output:
             err_info = '%s TIMEOUT' % cmd
             RemoteMonitor.test_error(self, err_info)
-        output = RemoteMonitor.remove_cmd_echo_blank_space(self, cmd=cmd, output=output)
+        output = RemoteMonitor.remove_cmd_echo_blank_space(self,
+                                                           cmd=cmd,
+                                                           output=output)
         if verbose == True:
             RemoteMonitor.test_print(self, info=output, serial_debug=True)
-        if re.findall(r'command not found', output) or re.findall(r'-bash', output):
-            RemoteMonitor.test_error(self, 'Command %s failed' %cmd)
+        if re.findall(r'command not found', output) \
+                or re.findall(r'-bash', output):
+            RemoteMonitor.test_error(self, 'Command %s failed' % cmd)
         return output
 
     def serial_get_ip(self):
