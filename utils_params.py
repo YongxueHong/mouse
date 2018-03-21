@@ -35,7 +35,7 @@ class Params():
                     return file_path
 
         if not file_path:
-            info = 'No found corresponding yaml file : %s' %(search_name)
+            info = 'No found corresponding yaml file : %s' % (search_name)
             raise Error(info)
 
     def build_dict_from_yaml(self):
@@ -54,7 +54,8 @@ class Params():
                     self._params['only_case_list'].append(case)
                     flag_match = True
             if not flag_match:
-                info = 'No found corresponding case %s in %s requirement yaml file.' %(case, self._yaml_id)
+                info = 'No found corresponding case %s ' \
+                       'in %s requirement yaml file.' % (case, self._yaml_id)
                 raise Error(info)
 
     def vm_base_cmd_add(self, option, value):
