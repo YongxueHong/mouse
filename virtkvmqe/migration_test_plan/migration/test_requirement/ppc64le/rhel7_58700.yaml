@@ -10,8 +10,8 @@ test_matrix:
 host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
 
-src_host_ip: '10.16.68.28'
-dst_host_ip: '10.16.67.232'
+src_host_ip: '120.0.0.1'
+dst_host_ip: '120.0.0.1'
 
 test_requirement:
  name:
@@ -19,12 +19,12 @@ test_requirement:
 
 incoming_port: '4000'
 
-share_images_dir: '/home/yhong/images/'
+share_images_dir: '/home/mouse/images/'
 
 # qemu command line
 vm_cmd_base:
  name:
-  - '"yhong-vm"'
+  - '"mouse-vm"'
  sandbox:
   - 'off'
  machine:
@@ -46,7 +46,7 @@ vm_cmd_base:
   - 'virtio-net-pci,mac=9a:8a:8b:8c:8d:8e,id=net0,vectors=4,netdev=tap0,bus=pci.0,addr=0x5'
   - 'usb-tablet,id=usb-tablet1,bus=usb1.0,port=1'
  drive:
-  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file=/home/yhong/images/rhel75-ppc64le-virtio-scsi.qcow2'
+  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file=/home/mouse/images/rhel75-ppc64le-virtio-scsi.qcow2'
  netdev:
   - 'tap,id=tap0,vhost=on'
  m:
