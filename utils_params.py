@@ -18,7 +18,7 @@ class Params():
 
     def get(self, key, default=None):
         val = self._params.get(key)
-        if not val:
+        if default:
             self._params[key] = default
             val = self._params.get(key)
         return val
