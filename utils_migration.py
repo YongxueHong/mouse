@@ -2,7 +2,7 @@ import time
 from monitor import RemoteQMPMonitor
 import re
 
-def do_migration(test, cmd, src_remote_qmp, dst_remote_qmp, migrate_port, src_ip=None,
+def do_migration(test, src_remote_qmp, dst_remote_qmp, migrate_port, src_ip=None,
                         dst_ip=None):
     if dst_ip:
         cmd = '{"execute":"migrate", "arguments": { "uri": "tcp:%s:%d" }}' \
@@ -56,7 +56,7 @@ def ping_pong_migration(params, test, cmd, id, src_host_session,
             dst_qemu_cmd = params.create_qemu_cmd()
             src_host_session.boot_remote_guest(ip=dst_ip, cmd=dst_qemu_cmd, vm_alias='dst')
             dst_remote_qmp = RemoteQMPMonitor(id, params, dst_ip, dst_port)
-            do_migration(test, cmd, src_remote_qmp, dst_remote_qmp, src_ip=None,
+            do_migration(test, src_remote_qmp, dst_remote_qmp, src_ip=None,
                         dst_ip=dst_ip, migrate_port=migrate_port)
 
         elif re.findall(r'"status": "running"', dst_output) \
@@ -72,7 +72,7 @@ def ping_pong_migration(params, test, cmd, id, src_host_session,
 
             src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
             src_remote_qmp = RemoteQMPMonitor(id, params, src_ip, src_port)
-            do_migration(test, cmd, src_remote_qmp, dst_remote_qmp, src_ip=src_ip,
+            do_migration(test, src_remote_qmp, dst_remote_qmp, src_ip=src_ip,
                         dst_ip=None, migrate_port=migrate_port)
 
         elif re.findall(r'"status": "running"', src_output) \
@@ -88,7 +88,28 @@ def ping_pong_migration(params, test, cmd, id, src_host_session,
 
             src_host_session.boot_remote_guest(ip=dst_ip, cmd=dst_qemu_cmd, vm_alias='dst')
             dst_remote_qmp = RemoteQMPMonitor(id, params, dst_ip, dst_port)
-            do_migration(test, cmd, src_remote_qmp, dst_remote_qmp, src_ip=None,
+            do_migration(test, src_remote_qmp, dst_remote_qmp, src_ip=None,
                         dst_ip=dst_ip, migrate_port=migrate_port)
 
     return src_remote_qmp, dst_remote_qmp
+
+def change_balloon_val(test, new_value, remote_qmp):
+    test.test_print('Change the value of balloon to %d bytes' % new_value)
+    cmd = '{"execute": "balloon","arguments":{"value":%d}}' % new_value
+    remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=5)
+
+    test.test_print('Check if the balloon value becomes to %d bytes'
+                      % new_value)
+    cmd = '{"execute":"query-balloon"}'
+    timeout = 300
+    end_time = time.time() + timeout
+    flag_done = False
+    while time.time() < end_time:
+        output = remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=2)
+        if re.findall(r'"actual": %d' % new_value, output):
+            flag_done = True
+            break
+        time.sleep(3)
+    if flag_done == False:
+        test.test_error('Error: The value of balloon is not changed to %d '
+                        'bytes in %s sec' % (new_value, timeout))
