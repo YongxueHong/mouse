@@ -10,8 +10,8 @@ test_matrix:
 host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
 
-src_host_ip: '10.66.10.122'
-dst_host_ip: '10.66.10.208'
+src_host_ip: '127.0.0.1'
+dst_host_ip: '127.0.0.1'
 
 test_requirement:
  name:

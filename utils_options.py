@@ -93,6 +93,11 @@ class Options():
     def initial_options(self):
         opt_dict = {}
         try:
+            for args in sys.argv[1:]:
+                if not re.findall(r'--', args):
+                    print("Please Check the command again.")
+                    self.usage()
+                    sys.exit(1)
             options, args = getopt.getopt(sys.argv[1:], "", options_list)
             for opt, val in options:
                 if opt == "--help":
@@ -120,7 +125,8 @@ class Options():
                     opt_dict[opt] = val
 
         except getopt.GetoptError:
-            print ("Please use Start2Run.py --help.")
+            print("Please Check the command again.")
+            self.usage()
             sys.exit(1)
         return opt_dict
 

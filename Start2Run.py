@@ -14,7 +14,8 @@ if __name__ == "__main__":
             and options.options['--test_requirement']:
         requirement_id = options.options['--test_requirement']
     else:
-        print ("Please use Start2Run.py --help.")
+        print("Please Check the command again.")
+        options.usage()
         sys.exit(1)
     if options.has_key('--test_cases') and options.options['--test_cases']:
         case_list = options.options['--test_cases'].split(",")
