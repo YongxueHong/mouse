@@ -82,7 +82,8 @@ class Options():
 
         if not file_path:
             info = 'No found corresponding yaml file : %s' % search_name
-            raise Error(info)
+            print (info)
+            sys.exit(1)
 
     def usage(self):
         print ("%s" % help_info)
@@ -102,11 +103,14 @@ class Options():
             for opt, val in options:
                 if opt == "--help":
                     self.usage()
+                    sys.exit(1)
                 elif opt == "--show_category":
                     self.show_category()
+                    sys.exit(1)
                 elif opt == "--show_requirement":
                     if val:
                         self.show_requirement_info(val)
+                        sys.exit(1)
                 elif opt == "--test_requirement":
                     opt_dict[opt] = val
                 elif opt == "--test_cases":
