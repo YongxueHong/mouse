@@ -129,9 +129,10 @@ def run_case(params):
         dst_remote_qmp.test_error('Destination guest boot error')
 
     test.main_step_log('4. Start live migration from src host')
-    do_migration(test, src_remote_qmp=src_remote_qmp,
-                 dst_remote_qmp=dst_remote_qmp, migrate_port=incoming_port,
-                 src_ip=SRC_HOST_IP, dst_ip=DST_HOST_IP)
+    do_migration(test, remote_qmp=src_remote_qmp, migrate_port=incoming_port,
+                 dst_ip=DST_HOST_IP)
+
+    pass
 
     test.main_step_log('5. Check guest status. Reboot guest ,  guest has '
                        '1 system disk and keeps working well.')
