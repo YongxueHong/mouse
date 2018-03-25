@@ -81,9 +81,8 @@ def run_case(params):
         test.test_print("Destination guest don't have balloon device")
 
     test.main_step_log('5. Start live migration, should finish successfully')
-    do_migration(test, src_remote_qmp=src_remote_qmp,
-                 dst_remote_qmp=dst_remote_qmp, src_ip=SRC_HOST_IP,
-                 dst_ip=DST_HOST_IP, migrate_port=incoming_port)
+    do_migration(test, remote_qmp=src_remote_qmp, migrate_port=incoming_port,
+                 dst_ip=DST_HOST_IP)
 
     test.main_step_log('6. Check guest on des, guest should work well.')
     dst_serial = RemoteSerialMonitor(id, params, DST_HOST_IP, serial_port)
@@ -108,16 +107,15 @@ def run_case(params):
     test.main_step_log('9. Quit qemu on src host. Then boot guest with '
                        '\'-incoming\'on src host, and with '
                        'memory balloon device')
-    src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=6)
+    src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=5)
     params.vm_base_cmd_add('device', 'virtio-balloon-pci,id=balloon0,'
                                      'bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
 
     test.main_step_log('10. Start live migration, should finish successfully.')
-    do_migration(test, src_remote_qmp=dst_remote_qmp,
-                 dst_remote_qmp=src_remote_qmp, src_ip=DST_HOST_IP,
-                 dst_ip=SRC_HOST_IP, migrate_port=incoming_port)
+    do_migration(test, remote_qmp=dst_remote_qmp, migrate_port=incoming_port,
+                 dst_ip=SRC_HOST_IP)
 
     test.main_step_log('11&12. Check guest on src, reboot, '
                        'ping external host,and shutdown.')
