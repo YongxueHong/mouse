@@ -1,8 +1,10 @@
 import os
-BASE_FILE = os.path.dirname(os.path.abspath(__file__))
+import sys
 import re
 import yaml
 from usr_exceptions import Error
+BASE_FILE = os.path.dirname(os.path.abspath(__file__))
+
 
 class Params():
     def __init__(self, yaml_id=None, case_list=None):
@@ -35,8 +37,9 @@ class Params():
                     return file_path
 
         if not file_path:
-            info = 'No found corresponding yaml file : %s' % (search_name)
-            raise Error(info)
+            info = 'No found corresponding yaml file : %s' % search_name
+            print (info)
+            sys.exit(1)
 
     def build_dict_from_yaml(self):
         params_dict = {}
@@ -56,7 +59,8 @@ class Params():
             if not flag_match:
                 info = 'No found corresponding case %s ' \
                        'in %s requirement yaml file.' % (case, self._yaml_id)
-                raise Error(info)
+                print (info)
+                sys.exit(1)
 
     def vm_base_cmd_add(self, option, value):
         val_list = []
