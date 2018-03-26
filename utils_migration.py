@@ -2,20 +2,18 @@ import time
 from monitor import RemoteQMPMonitor
 import re
 
-def do_migration(test, remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
+def do_migration(test, remote_qmp, migrate_port, dst_ip):
     cmd = '{"execute":"migrate", "arguments": { "uri": "tcp:%s:%d" }}' \
               % (dst_ip, migrate_port)
     remote_qmp.qmp_cmd_output(cmd=cmd)
     test.sub_step_log('Check the status of migration')
     cmd = '{"execute":"query-migrate"}'
-    end_time = time.time() + chk_timeout
-    while time.time() < end_time:
+    while True:
         output = remote_qmp.qmp_cmd_output(cmd=cmd)
         if re.findall(r'"remaining": 0', output):
-            return True
+            break
         elif re.findall(r'"status": "failed"', output):
             remote_qmp.test_error('migration failed')
-    return False
 
 def ping_pong_migration(params, test, id, src_host_session,
                         src_remote_qmp, dst_remote_qmp, src_ip, src_port,
