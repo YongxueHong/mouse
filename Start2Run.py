@@ -29,6 +29,3 @@ if __name__ == "__main__":
 
     runner = runner.CaseRunner(params)
     runner.main_run()
-
-
-
