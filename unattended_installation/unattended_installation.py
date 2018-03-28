@@ -108,10 +108,13 @@ def run_case(params):
     ks_dir = os.path.join(BASE_FILE, 'ks')
     if not os.path.exists(ks_dir):
         os.makedirs(ks_dir)
-    ks = os.path.join(ks_dir, params.get('ks_name'))
+    test.main_step_log('5. Find the corresponding ks')
+    ks_pattern = params.get('iso_name').split('.')[0] + '*'
+    ks = host_session.host_cmd_output('find %s -name %s'
+                                      % (ks_dir, ks_pattern))
     ks_iso = os.path.join(ks_dir, 'ks.iso')
 
-    test.main_step_log('5. Make a %s form %s.' % (ks_iso, ks))
+    test.main_step_log('6. Make a %s form %s.' % (ks_iso, ks))
     host_session.host_cmd_output('mkisofs -o %s %s' % (ks_iso, ks))
 
     params.vm_base_cmd_add('drive',
@@ -133,7 +136,7 @@ def run_case(params):
     if not os.path.exists(mount_dir):
         os.makedirs(mount_dir)
 
-    test.main_step_log('6. cp vmlinuz and initrd.img form %s.' % iso_name)
+    test.main_step_log('7. cp vmlinuz and initrd.img form %s.' % iso_name)
     host_session.host_cmd_output('mount %s %s' % (iso_name, mount_dir))
     host_session.host_cmd_output('cp /%s/images/pxeboot/vmlinuz %s'
                                  % (mount_dir, image_dir))
@@ -141,7 +144,7 @@ def run_case(params):
                                  % (mount_dir, image_dir))
     host_session.host_cmd_output('umount %s' % mount_dir)
 
-    test.main_step_log('7. Check the name of mounted ks.iso.')
+    test.main_step_log('8. Check the name of mounted ks.iso.')
     host_session.host_cmd_output('mount %s %s' % (ks_iso, mount_dir))
     ks_name = host_session.host_cmd_output('ls %s' % mount_dir)
     host_session.host_cmd_output('umount %s' % mount_dir)
@@ -162,7 +165,7 @@ def run_case(params):
     params.vm_base_cmd_add('initrd',
                            '"%s/initrd.img"' % image_dir)
 
-    test.main_step_log('8. Boot this guest and start to install os automaticlly.')
+    test.main_step_log('9. Boot this guest and start to install os automaticlly.')
     qemu_cmd = params.create_qemu_cmd()
     host_session.boot_guest(cmd=qemu_cmd)
     guest_serial = RemoteSerialMonitor(case_id=id,
