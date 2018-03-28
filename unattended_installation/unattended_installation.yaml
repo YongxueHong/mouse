@@ -4,8 +4,13 @@ guest_passwd: 'kvmautotest'
 guest_arch: 'x86_64'
 image_name: 'rhel75'
 image_size: '20G'
-iso_name: 'RHEL-7.5-20180221.0-Server-x86_64-dvd1.iso'
+iso_name: 'RHEL-7.5'
 ks_name: 'RHEL-7-series.ks'
+nfs_server:
+ - '10.73.194.27:/vol/s2kvmauto/iso'
+ - '10.12.0.20:/srv/kvmqe/isos'
+
+rtt_tolerance: '150'
 
 drive_format: 'virtio_scsi'
 image_format: 'qcow2'
