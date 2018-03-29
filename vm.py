@@ -34,12 +34,6 @@ class Test():
             log_file_list.append(log_file)
         for log_file in log_file_list:
             if os.path.exists(log_file):
-                run_log = open(log_file, "r")
-                if run_log:
-                    for line in run_log.readlines():
-                        self.check_err_info(line)
-
-            if os.path.exists(log_file):
                 try:
                     run_log = open(log_file, "a")
                     for line in log_str.splitlines():
@@ -63,14 +57,6 @@ class Test():
                     txt += "Log content: %s\n" % log_str
                     txt += "Exception error: %s" % err
                     self.test_error(err_info=txt)
-
-    def check_err_info(self, content):
-            if re.findall(r'Error', content):
-                # Delete the timestamp of run timeout.e.g:2018-01-13-18
-                if re.findall(r'\d+-\d+-\d+', content):
-                    content_list = re.split(r':', content)
-                    content = ':'.join(content_list[-2:])
-                raise usr_exceptions.Error(content)
 
     def test_print(self, info, short_debug=True, serial_debug=False):
         if self.params.get('verbose') == 'yes':
