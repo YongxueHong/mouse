@@ -129,7 +129,7 @@ def run_case(params):
 
     test.sub_step_log('4.4 dd a file inside guest')
     cmd_dd = 'dd if=/dev/zero of=file1 bs=100M count=10 oflag=direct'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=10)
+    output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
     if not output or re.findall('error', output):
         test.test_error('Failed to dd a file in guest')
 
