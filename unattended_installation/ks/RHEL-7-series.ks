@@ -1,5 +1,5 @@
 install
-graphical
+text
 poweroff
 lang en_US.UTF-8
 keyboard us
