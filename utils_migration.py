@@ -7,6 +7,9 @@ def do_migration(test, remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
               % (dst_ip, migrate_port)
     remote_qmp.qmp_cmd_output(cmd=cmd)
     test.sub_step_log('Check the status of migration')
+    return query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout)
+
+def query_migration(remote_qmp, chk_timeout=1200):
     cmd = '{"execute":"query-migrate"}'
     end_time = time.time() + chk_timeout
     while time.time() < end_time:
