@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import yaml
+import json
 from usr_exceptions import Error
 BASE_FILE = os.path.dirname(os.path.abspath(__file__))
 
@@ -12,6 +13,7 @@ class Params():
         self._case_list = case_list
         self._params = {}
         self.build_dict_from_yaml()
+        self.convert_variables()
         if self._case_list:
             self.find_case_from_yaml()
 
@@ -118,4 +120,19 @@ class Params():
         cmd_line = cmd_line.replace('None', '')
         return cmd_line
 
+    def convert_variables(self):
+        str_json = json.dumps(self._params)
+        vars = re.findall(r'{\w+}', str_json)
+
+        for var in vars:
+            for key, val in self._params.items():
+                if key == var.strip('{').strip('}'):
+                    str_json = re.sub(var, val, str_json)
+
+        remain_vars = re.findall(r'{\w+}', str_json)
+        if remain_vars:
+            print ('%s variables not assigned in %s.yaml.'
+                   % (remain_vars, self._yaml_id))
+            sys.exit(1)
+        self._params = json.loads(str_json)
 
