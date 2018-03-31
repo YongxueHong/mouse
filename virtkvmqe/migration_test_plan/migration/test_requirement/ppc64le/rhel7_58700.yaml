@@ -1,30 +1,37 @@
-test_matrix:
- interface:
-  virtio-scsi: 'yes'
-  virtio-blk: 'no'
- backend:
-  iscsi: 'no'
-  local: 'yes'
-  nfs: 'no'
-
+# Set password of host and guest
 host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
 
-# Set your source host ip address.
-src_host_ip: 'xxx.xxx.xxx.xxx'
-# Set your destination host ip address.
-dst_host_ip: 'xxx.xxx.xxx.xxx'
+# Set your source and destination host ip address.
+src_host_ip: 'xxx.xxx.xxx'
+dst_host_ip: 'xxx.xxx.xxx'
 
+# Set the test requirement info.
 test_requirement:
- name:
-  - "Migration - ppc64le"
+ name: "Migration - ppc64le"
 
+# Set the incoming port for migration.
 incoming_port: '4000'
 
 # Set your shared images directory.
-share_images_dir: 'share_images_dir'
+share_images_dir: '/xxxx/xxx/xxx/'
 
-# qemu command line
+# Set the guest system image.
+image1_name: 'xxxx.qcow2'
+
+# Set the guest memory size.
+mem_size: '4096'
+
+# Set the guest vnc port.
+vnc_port: '10'
+
+# Set the guest qmp port.
+qmp_port: '3333'
+
+# Set the guest serial port.
+serial_port: '4444'
+
+# Set qemu base command line.
 vm_cmd_base:
  name:
   - '"mouse-vm"'
@@ -49,15 +56,15 @@ vm_cmd_base:
   - 'virtio-net-pci,mac=9a:8a:8b:8c:8d:8e,id=net0,vectors=4,netdev=tap0,bus=pci.0,addr=0x5'
   - 'usb-tablet,id=usb-tablet1,bus=usb1.0,port=1'
  drive:
-  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file={share_images_dir}/{image_file}'
+  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file=file={share_images_dir}/{image1_name}'
  netdev:
   - 'tap,id=tap0,vhost=on'
  m:
-  - '4096'
+  - '{mem_size}'
  smp:
   - '4,maxcpus=4,cores=2,threads=1,sockets=2'
  vnc:
-  - ':10'
+  - ':{vnc_port}'
  rtc:
   - 'base=utc,clock=host'
  boot:
@@ -65,34 +72,36 @@ vm_cmd_base:
  enable-kvm:
   - 'None'
  qmp:
-  - 'tcp:0:3333,server,nowait'
+  - 'tcp:0:{qmp_port},server,nowait'
  serial:
-  - 'tcp:0:4444,server,nowait'
+  - 'tcp:0:{serial_port},server,nowait'
  monitor:
   - 'stdio'
 
+# Set the test case info linked to this test requirement.
 test_cases:
  rhel7_10022:
-  name:
-   - "[migration] Migrate guest via a compressed file"
+  name: "[migration] Migrate guest via a compressed file"
  rhel7_10026:
-  name:
-   - "[migration] Do live migrate during vm reboot"
+  name: "[migration] Do live migrate during vm reboot"
  rhel7_10031:
-  name:
-   - "[migration] Live migration support in virtio-blk-data-plane"
+  name: "[migration] Live migration support in virtio-blk-data-plane"
  rhel7_10039:
-  name:
-   - "[migration] Do migration after hot plug vdisk"
+  name: "[migration] Do migration after hot plug vdisk"
  rhel7_10040:
-  name:
-   - "[migration] Do migration after hot remove vdisk"
+  name: "[migration] Do migration after hot remove vdisk"
  rhel7_10055:
-  name:
-   - "[migration] Stop VM after migration begins"
+  name: "[migration] Stop VM after migration begins"
+ rhel7_10056:
+  name: "[migration] Set migration speed(max-bandwidth) after migration begins"
  rhel7_10059:
-  name:
-   - "[migration] Ping-pong migration during file transfer"
+  name: "[migration] Ping-pong migration during file transfer"
+ rhel7_10061:
+  name: "[migration] Cancel a migration process with "migration_cancel" command"
+ rhel7_10075:
+  name: "[migration] Live migration via unix protocol"
+ rhel7_10078:
+  name: "[migration] Migrate guest after hot plug/unplug memory balloon device"
 
 verbose: 'no'
 
