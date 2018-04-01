@@ -165,7 +165,7 @@ class TestCmd(Test):
         lock.acquire()
         stop_find = False
         while True:
-            s = stream.readline()
+            s = stream.stdout.readline() + stream.stderr.readline()
             if not s:
                 break
             s = s.decode('utf-8').rstrip()
@@ -176,8 +176,9 @@ class TestCmd(Test):
                     lock.release()
                     if re.findall(r'Failed', s) \
                             or re.findall(r'Address already in use', s)\
-                            or re.findall(r'not found', s):
-                        err_info = 'Failed to boot guest : %s' %s
+                            or re.findall(r'not found', s) \
+                            or stream.stderr.readline():
+                        err_info = 'Failed to boot guest : %s' % s
                         Test.test_error(self, err_info)
                     stop_find = True
             if vm_alias:
@@ -195,7 +196,7 @@ class TestCmd(Test):
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         t1 = threading.Thread(target=self.reader,
-                              args=('stdout', sub.stdout, stdout, self._lock, vm_alias))
+                              args=('stdout', sub, stdout, self._lock, vm_alias))
         t1.daemon = True
         t1.name = 'stdout_thread'
         t1.start()
