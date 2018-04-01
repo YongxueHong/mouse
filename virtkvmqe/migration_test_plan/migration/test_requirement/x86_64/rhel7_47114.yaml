@@ -97,7 +97,7 @@ test_cases:
  rhel7_10059:
   name: "[migration] Ping-pong migration during file transfer"
  rhel7_10061:
-  name: "[migration] Cancel a migration process with "migration_cancel" command"
+  name: "[migration] Cancel a migration process with \"migration_cancel\" command"
  rhel7_10075:
   name: "[migration] Live migration via unix protocol"
  rhel7_10078:
