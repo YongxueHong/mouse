@@ -3,8 +3,8 @@ host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
 
 # Set your source and destination host ip address.
-src_host_ip: 'xxx.xxx.xxx'
-dst_host_ip: 'xxx.xxx.xxx'
+src_host_ip: 'xxx.xxx.xxx.xxx'
+dst_host_ip: 'xxx.xxx.xxx.xxx'
 
 # Set the test requirement info.
 test_requirement:
@@ -14,7 +14,7 @@ test_requirement:
 incoming_port: '4000'
 
 # Set your shared images directory.
-share_images_dir: '/xxxx/xxx/xxx/'
+share_images_dir: '/xxx/xxx/xxx/'
 
 # Set the guest system image.
 image1_name: 'xxxx.qcow2'
