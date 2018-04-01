@@ -58,7 +58,7 @@ class Options():
                     for case, info in params_dict['test_cases'].items():
                         print ("(%d) %s: %s" % (index,
                                                 case.upper().replace("_", "-"),
-                                                info['name'][0]))
+                                                info['name']))
                         index = index + 1
 
         if not file_path:

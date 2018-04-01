@@ -20,7 +20,7 @@ class CaseRunner():
         self._bars = ['|', '/', '-', '\\', '|', '/', '-', '\\']
         self._params = params
         self._requirement_id = params.get_requirement_id()
-        self._requirement_name = params.get('test_requirement')['name'][0]
+        self._requirement_name = params.get('test_requirement')['name']
         self._case_list = []
         self._case_dict = {}
         self._case_dict = utils_modules.setup_modules(self._requirement_id)
@@ -67,7 +67,7 @@ class CaseRunner():
             for pass_case in self._run_result['pass_cases']:
                 print '   %d: %s-%s' % (cnt, pass_case.upper().replace('_', '-'),
                                         self._params.get('test_cases')
-                                        [pass_case]['name'][0])
+                                        [pass_case]['name'])
                 cnt = cnt + 1
         print ('==>ERROR : %s '  %(self._run_result['ERROR']))
         if self._run_result['ERROR'] != 0:
@@ -75,7 +75,7 @@ class CaseRunner():
             for error_case in self._run_result['error_cases']:
                 print ('   %d: \033[91m%s\033[00m-%s'
                        % (cnt, error_case.upper().replace('_', '-'),
-                          self._params.get('test_cases')[error_case]['name'][0]))
+                          self._params.get('test_cases')[error_case]['name']))
                 cnt = cnt + 1
         print ('==>RUN TIME : %s min %s sec '
                % (int(self._run_time / 60),
@@ -117,7 +117,7 @@ class CaseRunner():
                 info = '--> Running case(%s/%s): %s-%s ' \
                        % (cont, self._run_result['TOTAL'],
                           case.upper().replace('_', '-'),
-                          self._params.get('test_cases')[case]['name'][0])
+                          self._params.get('test_cases')[case]['name'])
                 sys.stdout.write(info)
                 sys.stdout.flush()
             sub_proc = multiprocessing.Process(target=self._run,
