@@ -161,10 +161,8 @@ class TestCmd(Test):
         elif (enable_output == False):
             return fd, pid
 
-    def reader(self, name, stream, outbuf, lock, vm_alias=None):
-        lock.acquire()
-        stop_find = False
-        while True:
+    def reader(self, name, stream, outbuf, vm_alias=None):
+        while 1:
             s = stream.stdout.readline() + stream.stderr.readline()
             if not s:
                 break
@@ -172,39 +170,24 @@ class TestCmd(Test):
             outbuf.append(s)
             if re.findall(r'QEMU', s) or re.findall(r'qemu-kvm:', s)\
                     or re.findall(r'(qemu)', s):
-                if stop_find == False:
-                    lock.release()
-                    if re.findall(r'Failed', s) \
-                            or re.findall(r'Address already in use', s)\
-                            or re.findall(r'not found', s) \
-                            or stream.stderr.readline():
-                        err_info = 'Failed to boot guest : %s' % s
-                        Test.test_error(self, err_info)
-                    stop_find = True
-            if vm_alias:
-                Test.test_print(self, 'From %s->%s: %s' % (vm_alias, name, s))
-            else:
-                Test.test_print(self, '%s: %s' % (name, s))
-        stream.close()
+                if vm_alias:
+                    Test.test_print(self, 'From %s->%s: %s' % (
+                    vm_alias, name, s))
+                else:
+                    Test.test_print(self, '%s: %s' % (name, s))
 
     def subprocess_cmd_advanced(self, cmd, echo_cmd=True, vm_alias=None):
         pid = ''
         stdout = []
-        self._lock = threading.Lock()
         if echo_cmd == True:
             Test.test_print(self, cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         t1 = threading.Thread(target=self.reader,
-                              args=('stdout', sub, stdout, self._lock, vm_alias))
+                              args=('stdout', sub, stdout, vm_alias))
         t1.daemon = True
         t1.name = 'stdout_thread'
         t1.start()
-        while 1:
-            if self._lock.acquire():
-                break
-            pass
-        self._lock.release()
         return sub.returncode, stdout
 
     def remove_cmd_echo_blank_space(self, output, cmd):
