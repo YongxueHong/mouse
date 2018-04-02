@@ -1,3 +1,20 @@
+# ----Set install option----
+guest_arch: 'x86_64'
+image_name: 'install_sys_disk'
+image_size: '20G'
+iso_name: 'RHEL-7.5'
+install_timeout: '4800'
+
+nfs_server:
+ - '10.73.194.27:/vol/s2kvmauto/iso'
+ - '10.12.0.20:/srv/kvmqe/isos'
+
+rtt_tolerance: '150'
+
+drive_format: 'virtio_scsi'
+image_format: 'qcow2'
+# ---- End ----
+
 # Set password of host and guest
 host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
@@ -98,6 +115,8 @@ test_cases:
   name: "[migration] Ping-pong migration during file transfer"
  rhel7_10061:
   name: "[migration] Cancel a migration process with \"migration_cancel\" command"
+ rhel7_10070:
+  name: "[migration] Migrate guest during VM installation - scenario4 - offline migration"
  rhel7_10075:
   name: "[migration] Live migration via unix protocol"
  rhel7_10078:

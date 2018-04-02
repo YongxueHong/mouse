@@ -1,3 +1,20 @@
+# ----Set install option----
+guest_arch: 'ppc64le'
+image_name: 'install_sys_disk'
+image_size: '20G'
+iso_name: 'RHEL-7.5'
+install_timeout: '4800'
+
+nfs_server:
+ - '10.73.194.27:/vol/s2kvmauto/iso'
+ - '10.12.0.20:/srv/kvmqe/isos'
+
+rtt_tolerance: '150'
+
+drive_format: 'virtio_scsi'
+image_format: 'qcow2'
+# ---- End ----
+
 # Set password of host and guest
 host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
@@ -56,7 +73,7 @@ vm_cmd_base:
   - 'virtio-net-pci,mac=9a:8a:8b:8c:8d:8e,id=net0,vectors=4,netdev=tap0,bus=pci.0,addr=0x5'
   - 'usb-tablet,id=usb-tablet1,bus=usb1.0,port=1'
  drive:
-  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file=file={share_images_dir}/{image1_name}'
+  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file={share_images_dir}/{image1_name}'
  netdev:
   - 'tap,id=tap0,vhost=on'
  m:
@@ -98,6 +115,8 @@ test_cases:
   name: "[migration] Ping-pong migration during file transfer"
  rhel7_10061:
   name: "[migration] Cancel a migration process with \"migration_cancel\" command"
+ rhel7_10070:
+  name: "[migration] Migrate guest during VM installation - scenario4 - offline migration"
  rhel7_10075:
   name: "[migration] Live migration via unix protocol"
  rhel7_10078:
