@@ -120,6 +120,22 @@ class Test():
             err_info = 'Case Error: ' + 'RUN TIMEOUT'
             self.log_echo_file(log_str=err_info)
 
+    def main_step_log(self, log):
+        log_tag = '='
+        log_tag_rept = 7
+        log_info = '%s Step %s %s' % (log_tag * log_tag_rept,
+                                      log, log_tag * log_tag_rept)
+        if self.params.get('verbose') == 'yes':
+            print log_info
+        Test.log_echo_file(self, log_str=log_info)
+
+    def sub_step_log(self, str):
+        log_tag = '-'
+        log_tag_rept = 5
+        log_info = '%s %s %s' % (log_tag * log_tag_rept,
+                                 str, log_tag * log_tag_rept)
+        Test.test_print(self, info=log_info)
+
 
 class TestCmd(Test):
     def __init__(self, case_id, params):
@@ -316,20 +332,4 @@ class CreateTest(Test, TestCmd):
         Test.test_print(self,'======= Checking guest process existed =======')
         self.check_guest_process()
         Test.test_print(self, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
-    def main_step_log(self, log):
-        log_tag = '='
-        log_tag_rept = 7
-        log_info = '%s Step %s %s' % (log_tag * log_tag_rept,
-                                      log, log_tag * log_tag_rept)
-        if self.params.get('verbose') == 'yes':
-            print log_info
-        Test.log_echo_file(self, log_str=log_info)
-
-    def sub_step_log(self, str):
-        log_tag = '-'
-        log_tag_rept = 5
-        log_info = '%s %s %s' % (log_tag * log_tag_rept,
-                                 str, log_tag * log_tag_rept)
-        Test.test_print(self, info=log_info)
 
