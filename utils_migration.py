@@ -2,11 +2,11 @@ import time
 from monitor import RemoteQMPMonitor
 import re
 
-def do_migration(test, remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
+def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
     cmd = '{"execute":"migrate", "arguments": { "uri": "tcp:%s:%d" }}' \
               % (dst_ip, migrate_port)
     remote_qmp.qmp_cmd_output(cmd=cmd)
-    test.sub_step_log('Check the status of migration')
+    remote_qmp.sub_step_log('Check the status of migration')
     return query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout)
 
 def query_migration(remote_qmp, chk_timeout=1200):
@@ -49,7 +49,7 @@ def ping_pong_migration(params, test, id, src_host_session,
             src_host_session.boot_remote_guest(ip=dst_ip, cmd=dst_qemu_cmd,
                                                vm_alias='dst')
             dst_remote_qmp = RemoteQMPMonitor(id, params, dst_ip, dst_port)
-            do_migration(test, remote_qmp=src_remote_qmp,
+            do_migration(remote_qmp=src_remote_qmp,
                         dst_ip=dst_ip, migrate_port=migrate_port)
 
         elif re.findall(r'"status": "running"', dst_output) \
@@ -65,7 +65,7 @@ def ping_pong_migration(params, test, id, src_host_session,
 
             src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
             src_remote_qmp = RemoteQMPMonitor(id, params, src_ip, src_port)
-            do_migration(test, remote_qmp=dst_remote_qmp,
+            do_migration(remote_qmp=dst_remote_qmp,
                         dst_ip=src_ip, migrate_port=migrate_port)
 
         elif re.findall(r'"status": "running"', src_output) \
@@ -82,7 +82,7 @@ def ping_pong_migration(params, test, id, src_host_session,
             src_host_session.boot_remote_guest(ip=dst_ip, cmd=dst_qemu_cmd,
                                                vm_alias='dst')
             dst_remote_qmp = RemoteQMPMonitor(id, params, dst_ip, dst_port)
-            do_migration(test, remote_qmp=src_remote_qmp,
+            do_migration(remote_qmp=src_remote_qmp,
                         dst_ip=dst_ip, migrate_port=migrate_port)
 
     return src_remote_qmp, dst_remote_qmp
