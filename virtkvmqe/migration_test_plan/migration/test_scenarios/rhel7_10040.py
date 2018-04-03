@@ -34,11 +34,9 @@ def create_disk(host_session, disk_dir, disk_name, disk_format, disk_size):
 def run_case(params):
     SRC_HOST_IP = params.get('src_host_ip')
     DST_HOST_IP = params.get('dst_host_ip')
-    qmp_port = int(params.get('vm_cmd_base')
-                   ['qmp'][0].split(',')[0].split(':')[2])
-    serial_port = int(params.get('vm_cmd_base')
-                      ['serial'][0].split(',')[0].split(':')[2])
-    incoming_port = int(params.get('incoming_port'))
+    qmp_port = int(params.get('qmp_port'))
+    serial_port = int(params.get('serial_port'))
+    incoming_port = params.get('incoming_port')
     share_images_dir = params.get('share_images_dir')
     test = CreateTest(case_id='rhel7_10040', params=params)
     id = test.get_id()
@@ -72,22 +70,9 @@ def run_case(params):
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
     src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
 
-    test.sub_step_log('1.3 Check guest disk')
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-block"}',
-                                           recv_timeout=5)
-    if not re.findall(r'drive_image1', output):
-        src_remote_qmp.test_error('No found system disk')
-
-    test.sub_step_log('1.4 Connecting to src serial')
+    test.sub_step_log('1.3 Connecting to src serial')
     src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
     SRC_GUEST_IP = src_serial.serial_login()
-
-    test.sub_step_log('1.5 Check dmesg info ')
-    src_guest_session = GuestSession(case_id=id, params=params, ip=SRC_GUEST_IP)
-    cmd = 'dmesg'
-    output = src_guest_session.guest_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        src_guest_session.test_error('Guest hit call trace')
 
     test.main_step_log('2. In HMP, hot remove the block data disk '
                        'and scsi data disk.')
@@ -116,7 +101,7 @@ def run_case(params):
     params.vm_base_cmd_del('device', 'scsi-hd,drive=drive_r4,id=r4,'
                                      'bus=virtio_scsi_pci0.0,channel=0,'
                                      'scsi-id=0,lun=1')
-    incoming_val = 'tcp:0:%d' % incoming_port
+    incoming_val = 'tcp:0:%s' % incoming_port
     params.vm_base_cmd_add('incoming', incoming_val)
 
     dst_qemu_cmd = params.create_qemu_cmd()
@@ -129,7 +114,7 @@ def run_case(params):
         dst_remote_qmp.test_error('Destination guest boot error')
 
     test.main_step_log('4. Start live migration from src host')
-    flag = do_migration(test, remote_qmp=src_remote_qmp,
+    flag = do_migration(remote_qmp=src_remote_qmp,
                         migrate_port=incoming_port, dst_ip=DST_HOST_IP)
     if (flag == False):
         test.test_error('Migration timeout')
@@ -140,7 +125,7 @@ def run_case(params):
 
     test.sub_step_log('5.1 Reboot dst guest')
     dst_serial.serial_cmd(cmd='reboot')
-    DEST_GUEST_IP = dst_serial.serial_login()    
+    DEST_GUEST_IP = dst_serial.serial_login()
 
     test.sub_step_log('5.2 Check if guest only has 1 system disk')
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"query-block"}',
@@ -154,17 +139,17 @@ def run_case(params):
         dst_guest_session.test_print('The system disk is in disk')
 
     test.sub_step_log('5.3 Can access guest from external host')
-    external_host_ip = DST_HOST_IP
+    external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
         dst_guest_session.test_error('Ping failed')
 
     test.sub_step_log('5.4 quit qemu on src end and shutdown vm on dst end')
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
-    if output:
-        src_remote_qmp.test_error('Failed to quit qemu on src host')
-
     output = dst_serial.serial_cmd_output('shutdown -h now')
     if re.findall(r'Call trace', output):
         dst_serial.test_error('Guest hit Call trace during shutdown')
+
+    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
+    if output:
+        src_remote_qmp.test_error('Failed to quit qemu on src host')
