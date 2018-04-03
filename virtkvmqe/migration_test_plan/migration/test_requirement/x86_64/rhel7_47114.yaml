@@ -115,8 +115,14 @@ test_cases:
   name: "[migration] Ping-pong migration during file transfer"
  rhel7_10061:
   name: "[migration] Cancel a migration process with \"migration_cancel\" command"
+ rhel7_10064:
+  name: "[migration] Migrate guest after VM paused"
+ rhel7_10068:
+  name: "[migration] Migrate guest during the early stage of boot"
  rhel7_10070:
   name: "[migration] Migrate guest during VM installation - scenario4 - offline migration"
+ rhel7_10071:
+  name: "RHEL7-10071 - [migration] Migrate guest during VM installation - scenario3 - copying files"
  rhel7_10075:
   name: "[migration] Live migration via unix protocol"
  rhel7_10078:
