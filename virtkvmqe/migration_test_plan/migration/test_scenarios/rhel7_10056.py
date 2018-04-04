@@ -4,17 +4,15 @@ from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-from utils_migration import do_migration
+from utils_migration import do_migration, query_migration
 import threading
 
 def run_case(params):
     SRC_HOST_IP = params.get('src_host_ip')
     DST_HOST_IP = params.get('dst_host_ip')
-    qmp_port = int(params.get('vm_cmd_base')
-                   ['qmp'][0].split(',')[0].split(':')[2])
-    serial_port = int(params.get('vm_cmd_base')
-                      ['serial'][0].split(',')[0].split(':')[2])
-    incoming_port = int(params.get('incoming_port'))
+    qmp_port = int(params.get('qmp_port'))
+    serial_port = int(params.get('serial_port'))
+    incoming_port = params.get('incoming_port')
     test = CreateTest(case_id='rhel7_10056', params=params)
     id = test.get_id()
     src_host_session = HostSession(id, params)
@@ -28,24 +26,12 @@ def run_case(params):
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
     src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
 
-    test.sub_step_log('1.1 Check guest disk')
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-block"}',
-                                           recv_timeout=10)
-    if not re.findall(r'drive_image1', output):
-        src_remote_qmp.test_error('No found system disk')
-
-    test.sub_step_log('1.2 Connecting to src serial')
+    test.sub_step_log('1.1 Connecting to src serial')
     src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
     SRC_GUEST_IP = src_serial.serial_login()
-
-    test.sub_step_log('1.3 Check dmesg info ')
     src_guest_session = GuestSession(case_id=id, params=params, ip=SRC_GUEST_IP)
-    cmd = 'dmesg'
-    output = src_guest_session.guest_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        src_guest_session.test_error('Guest hit call trace')
 
-    test.sub_step_log('1.4 Running stress in src guest')
+    test.sub_step_log('1.2 Running stress in src guest')
     chk_cmd = 'yum list installed | grep stress.`arch`'
     output = src_guest_session.guest_cmd_output(cmd=chk_cmd)
     if not output:
@@ -63,7 +49,7 @@ def run_case(params):
     thread.name = 'stress'
     thread.daemon = True
     thread.start()
-    time.sleep(3)
+    time.sleep(5)
     output = src_guest_session.guest_cmd_output('pgrep -x stress')
     if not output:
         test.test_error('Stress is not running in guest')
@@ -71,7 +57,7 @@ def run_case(params):
     test.main_step_log('2. Start listening mode on dst host and '
                        'on src host do migration')
     test.sub_step_log('2.1 Start listening mode on dst host')
-    incoming_val = 'tcp:0:%d' % incoming_port
+    incoming_val = 'tcp:0:%s' % incoming_port
     params.vm_base_cmd_add('incoming', incoming_val)
     dst_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=DST_HOST_IP,
@@ -79,7 +65,7 @@ def run_case(params):
     dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
 
     test.sub_step_log('2.2. Do live migration from src to dst')
-    check_info = do_migration(test, remote_qmp=src_remote_qmp,
+    check_info = do_migration(remote_qmp=src_remote_qmp,
                               migrate_port=incoming_port, dst_ip=DST_HOST_IP,
                               chk_timeout=chk_time_1)
 
@@ -98,16 +84,7 @@ def run_case(params):
         else:
             test.test_error('Failed to change speed')
     test.sub_step_log('3.2 Check migration status again')
-    flag_1 = False
-    cmd = '{"execute":"query-migrate"}'
-    end_time = time.time() + chk_time_2
-    while time.time() < end_time:
-        output = src_remote_qmp.qmp_cmd_output(cmd=cmd)
-        if re.findall(r'"remaining": 0', output):
-            flag_1 = True
-            break
-        elif re.findall(r'"status": "failed"', output):
-            src_remote_qmp.test_error('Migration failed')
+    flag_1 = query_migration(remote_qmp=src_remote_qmp,chk_timeout=chk_time_2)
     if (flag_1 == False):
         test.test_error('Migration timeout after changing speed')
 
@@ -120,7 +97,7 @@ def run_case(params):
     DST_GUEST_IP = dst_serial.serial_login()
 
     test.sub_step_log('4.3 Ping external host')
-    external_host_ip = DST_HOST_IP
+    external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
     dst_guest_session = GuestSession(case_id=id, params=params, ip=DST_GUEST_IP)
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
