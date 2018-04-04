@@ -16,10 +16,10 @@ def run_case(params):
     test = CreateTest(case_id='rhel7_10056', params=params)
     id = test.get_id()
     src_host_session = HostSession(id, params)
-    speed = 1073741824
+    speed = '1073741824'
     chk_time_1 = 20
     chk_time_2 = 1200
-    stress_time = 60
+    stress_time = 120
 
     test.main_step_log('1. Start VM with high load, with each method is ok')
     src_qemu_cmd = params.create_qemu_cmd()
@@ -49,7 +49,7 @@ def run_case(params):
     thread.name = 'stress'
     thread.daemon = True
     thread.start()
-    time.sleep(5)
+    time.sleep(10)
     output = src_guest_session.guest_cmd_output('pgrep -x stress')
     if not output:
         test.test_error('Stress is not running in guest')
@@ -75,11 +75,11 @@ def run_case(params):
     if (check_info == False):
         test.test_print('Migration does not finish in %d seconds' % chk_time_1)
         speed_cmd = '{"execute":"migrate-set-parameters","arguments":' \
-                    '{"max-bandwidth": %d}}' % speed
+                    '{"max-bandwidth": %s}}' % speed
         src_remote_qmp.qmp_cmd_output(cmd=speed_cmd)
         paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
         output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd)
-        if re.findall(r'"max-bandwidth": %d' % speed, output):
+        if re.findall(r'"max-bandwidth": %s' % speed, output):
             test.test_print('Change speed successfully')
         else:
             test.test_error('Failed to change speed')
