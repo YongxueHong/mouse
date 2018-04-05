@@ -17,8 +17,8 @@ def run_case(params):
     id = test.get_id()
     guest_name = test.guest_name
     src_host_session = HostSession(id, params)
-    downtime = 20000
-    speed = 1073741824
+    downtime = '20000'
+    speed = '1073741824'
     chk_time_1 = 20
     chk_time_2 = 1200
 
@@ -49,7 +49,7 @@ def run_case(params):
     thread.name = 'stress'
     thread.daemon = True
     thread.start()
-    time.sleep(5)
+    time.sleep(10)
     output = src_guest_session.guest_cmd_output('pgrep -x stress')
     if not output:
         test.test_error('Stress is not running in guest')
@@ -106,15 +106,15 @@ def run_case(params):
     if (flag == False):
         test.sub_step_log('6.1 Enlarge the value of downtime and speed')
         downtime_cmd = '{"execute":"migrate-set-parameters","arguments":' \
-                       '{"downtime-limit": %d}}' % downtime
+                       '{"downtime-limit": %s}}' % downtime
         src_remote_qmp.qmp_cmd_output(cmd=downtime_cmd)
         speed_cmd = '{"execute":"migrate-set-parameters","arguments":' \
-                    '{"max-bandwidth": %d}}' % speed
+                    '{"max-bandwidth": %s}}' % speed
         src_remote_qmp.qmp_cmd_output(cmd=speed_cmd)
         paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
         output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd)
-        if re.findall(r'"downtime-limit": %d' % downtime, output) \
-                and re.findall(r'"max-bandwidth": %d' % speed, output):
+        if re.findall(r'"downtime-limit": %s' % downtime, output) \
+                and re.findall(r'"max-bandwidth": %s' % speed, output):
             test.test_print('Change downtime and speed successfully')
         else:
             test.test_error('Failed to change downtime and speed')

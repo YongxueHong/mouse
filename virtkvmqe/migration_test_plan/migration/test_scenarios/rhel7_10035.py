@@ -19,7 +19,7 @@ def run_case(params):
     downtime = 10000
     speed = 52428800
     speed_m = speed / 1024 / 1024
-    stress_time = 60
+    stress_time = 120
     gap_speed = 5
     gap_downtime = 5000
 
@@ -52,7 +52,7 @@ def run_case(params):
     thread.name = 'stress'
     thread.daemon = True
     thread.start()
-    time.sleep(5)
+    time.sleep(10)
     output = src_guest_session.guest_cmd_output('pgrep -x stress')
     if not output:
         test.test_error('Stress is not running in guest')
