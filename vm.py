@@ -238,10 +238,6 @@ class TestCmd(Test):
         ssh.close()
         return output, errput
 
-    def remote_scp(self, ip, cmd, passwd, timeout=1800):
-        return self.remote_ssh_cmd(ip=ip, cmd=cmd, passwd=passwd, timeout=timeout)
-
-
 class CreateTest(Test, TestCmd):
     def __init__(self, case_id, params):
         self.case_id = case_id
@@ -332,4 +328,3 @@ class CreateTest(Test, TestCmd):
         Test.test_print(self,'======= Checking guest process existed =======')
         self.check_guest_process()
         Test.test_print(self, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-
