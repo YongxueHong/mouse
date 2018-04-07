@@ -2,6 +2,7 @@ import re
 import time
 from vm import TestCmd
 import subprocess
+import pexpect
 
 class HostSession(TestCmd):
     def __init__(self, case_id, params):
@@ -53,30 +54,81 @@ class HostSession(TestCmd):
             TestCmd.test_error(self, 'Fail to run %s.' % cmd)
         return allput
 
-    def host_cmd_scp(self, src_file, dst_file, src_ip=None, dst_ip=None, timeout=300):
-        cmd = ''
-        output = ''
-        ip = ''
-        if dst_ip:
-            cmd = 'scp %s %s:%s' % (src_file, dst_ip, dst_file)
-            ip = dst_ip
-        if src_ip:
-            cmd = 'scp %s:%s %s' % (src_ip, src_file, dst_file)
-            ip = src_ip
-        TestCmd.test_print(self, cmd)
-        output, _ = TestCmd.remote_scp(self, ip=ip, cmd=cmd,
-                                       passwd=self._guest_passwd, timeout=timeout)
-        # Here need to remove command echo and blank space again
-        output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
-        if re.findall(r'No such file or directory', output):
-            TestCmd.test_error(self, output)
-        TestCmd.test_print(self, output)
+    def pexpect_scp_cmd(self, local_path, remote_path,
+                        passwd, remote_ip, put=True, timeout=600):
+        if put == True:
+            cmd = 'scp %s root@%s:%s' % (local_path, remote_ip, remote_path)
+            TestCmd.test_print(self, cmd)
+        else:
+            cmd  = 'scp root@%s:%s %s' % (remote_ip, remote_path, local_path)
+            TestCmd.test_print(self, cmd)
 
-    def sub_step_log(self, str):
-        log_tag = '-'
-        log_tag_rept = 5
-        log_info = '%s %s %s' % (log_tag*log_tag_rept, str, log_tag*log_tag_rept)
-        TestCmd.test_print(self, info=log_info)
+        ssh = pexpect.spawn(cmd, timeout=timeout)
+        try:
+            i = ssh.expect(['password:', 'continue connecting (yes/no)?',
+                            'Host key verification failed', pexpect.EOF],
+                           timeout=timeout)
+            if i == 0:
+                ssh.sendline(passwd)
+                ssh.sendline(cmd)
+                output = self.remove_cmd_echo_blank_space(output=ssh.read(),
+                                                          cmd=cmd)
+                ssh.close()
+                return output
+            elif i == 1:
+                ssh.sendline('yes\n')
+                ssh.expect('password: ')
+                ssh.sendline(passwd)
+                ssh.sendline(cmd)
+                output = self.remove_cmd_echo_blank_space(output=ssh.read(),
+                                                          cmd=cmd)
+                return output
+            elif i == 2:
+                self.host_cmd(cmd='echo > /root/.ssh/known_hosts')
+                self.pexpect_scp_cmd(local_path, remote_path, passwd,
+                                     remote_ip, put=True, timeout=600)
+                ssh.close()
+            else:
+                ssh.sendline(cmd)
+                output = self.remove_cmd_echo_blank_space(output=ssh.read(),
+                                                          cmd=cmd)
+                ssh.close()
+                return output
+
+        except pexpect.EOF:
+            err_info = 'End of File'
+            TestCmd.test_print(self, info=err_info)
+            ssh.close()
+            TestCmd.test_error(self, err_info)
+
+        except pexpect.TIMEOUT:
+            err_info = 'Command : %s TIMEOUT ' % (cmd)
+            TestCmd.test_print(self, info=err_info)
+            ssh.close()
+            TestCmd.test_error(self, err_info)
+
+    def host_cmd_scp_put(self, local_path, remote_path, passwd,
+                         remote_ip, timeout=300):
+        output = self.pexpect_scp_cmd(local_path=local_path,
+                                      remote_path=remote_path,
+                                      passwd=passwd,
+                                      remote_ip=remote_ip,
+                                      put=True,
+                                      timeout=timeout)
+
+        output = output.splitlines()[-1]
+        TestCmd.test_print(self, info=output)
+
+    def host_cmd_scp_get(self, local_path, remote_path, passwd,
+                         remote_ip, timeout=300):
+        output = self.pexpect_scp_cmd(local_path=local_path,
+                                      remote_path=remote_path,
+                                      passwd=passwd,
+                                      remote_ip=remote_ip,
+                                      put=False,
+                                      timeout=timeout)
+        output = output.splitlines()[-1]
+        TestCmd.test_print(self, info=output)
 
     def get_guest_pid(self, cmd, dst_ip=None):
         pid_list = []
@@ -91,9 +143,13 @@ class HostSession(TestCmd):
         cmd_check = 'ps -axu| grep %s | grep -v grep' % guest_name
         cmd_check_list.append(cmd_check)
         for cmd_check in cmd_check_list:
-            output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
-                                                    verbose=False, cmd=cmd_check)
-            output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
+            output, _ = TestCmd.subprocess_cmd_base(self,
+                                                    echo_cmd=False,
+                                                    verbose=False,
+                                                    cmd=cmd_check)
+            output = TestCmd.remove_cmd_echo_blank_space(self,
+                                                         output=output,
+                                                         cmd=cmd)
             if output and not re.findall(r'ssh root', cmd_check):
                 pid = re.split(r"\s+", output)[1]
                 pid_list.append(pid)
