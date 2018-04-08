@@ -140,7 +140,7 @@ class HostSession(TestCmd):
             cmd_check = 'ssh root@%s ps -axu | grep %s | grep -v grep' % \
                         (dst_ip, guest_name)
             cmd_check_list.append(cmd_check)
-        cmd_check = 'ps -axu| grep %s | grep -v grep' % guest_name
+        cmd_check = "ps -axu| grep %s | grep -vE 'grep|ssh'" % guest_name
         cmd_check_list.append(cmd_check)
         for cmd_check in cmd_check_list:
             output, _ = TestCmd.subprocess_cmd_base(self,
