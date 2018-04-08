@@ -103,10 +103,16 @@ test_cases:
   name: "[migration] Do live migrate during vm reboot"
  rhel7_10031:
   name: "[migration] Live migration support in virtio-blk-data-plane"
+ rhel7_10035:
+  name: "[migration] Check live migration statistics - non page delta compression"
  rhel7_10039:
   name: "[migration] Do migration after hot plug vdisk"
  rhel7_10040:
   name: "[migration] Do migration after hot remove vdisk"
+ rhel7_10047:
+  name: "[migration] Ping-pong live migration with large vcpu and memory values of guest"
+ rhel7_10052:
+  name: "[migration] Measure the migration speed(max-bandwidth)"
  rhel7_10055:
   name: "[migration] Stop VM after migration begins"
  rhel7_10056:
@@ -117,19 +123,23 @@ test_cases:
   name: "[migration] Cancel a migration process with \"migration_cancel\" command"
  rhel7_10064:
   name: "[migration] Migrate guest after VM paused"
+ rhel7_10067:
+  name: "[migration] Set migration downtime"
  rhel7_10068:
   name: "[migration] Migrate guest during the early stage of boot"
  rhel7_10070:
   name: "[migration] Migrate guest during VM installation - scenario4 - offline migration"
  rhel7_10071:
-  name: "RHEL7-10071 - [migration] Migrate guest during VM installation - scenario3 - copying files"
+  name: "[migration] Migrate guest during VM installation - scenario3 - copying files"
  rhel7_10075:
   name: "[migration] Live migration via unix protocol"
  rhel7_10078:
   name: "[migration] Migrate guest after hot plug/unplug memory balloon device"
+ rhel7_59369:
+  name: "[migration] Migrate guest after hotpluging vcpu - ppc only"
 
 verbose: 'no'
 
-timeout: '7200'
+timeout: '3600'
 
 
