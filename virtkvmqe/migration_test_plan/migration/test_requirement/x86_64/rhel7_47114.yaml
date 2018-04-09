@@ -109,6 +109,8 @@ test_cases:
   name: "[migration] Do migration after hot plug vdisk"
  rhel7_10040:
   name: "[migration] Do migration after hot remove vdisk"
+ rhel7_10044:
+  name: "[migration] Verify migration down time"
  rhel7_10047:
   name: "[migration] Ping-pong live migration with large vcpu and memory values of guest"
  rhel7_10052:
