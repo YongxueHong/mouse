@@ -15,7 +15,7 @@ class HostSession(TestCmd):
 
     def host_cmd(self, cmd, echo_cmd=True, timeout=600):
         if echo_cmd == True:
-            TestCmd.test_print(self,cmd)
+            TestCmd.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         endtime = time.time() + timeout
@@ -29,7 +29,7 @@ class HostSession(TestCmd):
         errput = ''
         endtime = time.time() + timeout
         if echo_cmd == True:
-            TestCmd.test_print(self, cmd)
+            TestCmd.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         while sub.poll() == None:
@@ -58,10 +58,10 @@ class HostSession(TestCmd):
                         passwd, remote_ip, put=True, timeout=600):
         if put == True:
             cmd = 'scp %s root@%s:%s' % (local_path, remote_ip, remote_path)
-            TestCmd.test_print(self, cmd)
+            TestCmd.test_print(self, '[root@host ~]# %s' % cmd)
         else:
             cmd  = 'scp root@%s:%s %s' % (remote_ip, remote_path, local_path)
-            TestCmd.test_print(self, cmd)
+            TestCmd.test_print(self, '[root@host ~]# %s' % cmd)
 
         ssh = pexpect.spawn(cmd, timeout=timeout)
         try:
