@@ -51,10 +51,8 @@ def run_case(params):
     dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
 
     test.main_step_log('3. Do ping-pong live migration for 5 times')
-    ping_pong_migration(params, test, id, src_host_session, src_remote_qmp,
-                        dst_remote_qmp, src_ip=SRC_HOST_IP, dst_ip=DST_HOST_IP,
-                        migrate_port=incoming_port, qmp_port=qmp_port,
-                        guest_name=guest_name, even_times=5)
+    ping_pong_migration(params, id, src_host_session, src_remote_qmp,
+                        dst_remote_qmp, times=5)
 
     test.main_step_log('4. After migration, check if guest works well')
     test.sub_step_log('4.1 Guest mouse and keyboard')
