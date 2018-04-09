@@ -6,6 +6,7 @@ import usr_exceptions
 import threading
 import re
 import paramiko
+import select
 
 class Test():
     def __init__(self, case_id, params):
@@ -177,34 +178,41 @@ class TestCmd(Test):
         elif (enable_output == False):
             return fd, pid
 
-    def reader(self, name, stream, outbuf, vm_alias=None):
-        while 1:
-            s = stream.stdout.readline() + stream.stderr.readline()
+    def reader_select(self, name, stream, outbuf, vm_alias=None):
+        timeout = 1
+        while bool(select.select([stream], [], [], timeout)[0]):
+            s = stream.readline()
             if not s:
                 break
             s = s.decode('utf-8').rstrip()
             outbuf.append(s)
-            if re.findall(r'QEMU', s) or re.findall(r'qemu-kvm:', s)\
-                    or re.findall(r'(qemu)', s):
-                if vm_alias:
-                    Test.test_print(self, 'From %s->%s: %s' % (
-                    vm_alias, name, s))
-                else:
-                    Test.test_print(self, '%s: %s' % (name, s))
+            if vm_alias:
+                Test.test_print(self, '%s->%s: %s' % (vm_alias, name, s))
+            else:
+                Test.test_print(self, '%s: %s' % (name, s))
+        stream.close()
 
     def subprocess_cmd_advanced(self, cmd, echo_cmd=True, vm_alias=None):
         pid = ''
         stdout = []
+        stderr = []
         if echo_cmd == True:
             Test.test_print(self, cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        t1 = threading.Thread(target=self.reader,
-                              args=('stdout', sub, stdout, vm_alias))
+        t1 = threading.Thread(target=self.reader_select,
+                              args=('stdout', sub.stdout, stdout, vm_alias))
+        t2 = threading.Thread(target=self.reader_select,
+                              args=('stderr', sub.stderr, stderr, vm_alias))
         t1.daemon = True
         t1.name = 'stdout_thread'
         t1.start()
-        return sub.returncode, stdout
+
+        t2.daemon = True
+        t2.name = 'stderr_thread'
+        t2.start()
+
+        return sub.returncode, stdout, stderr
 
     def remove_cmd_echo_blank_space(self, output, cmd):
         if output:
