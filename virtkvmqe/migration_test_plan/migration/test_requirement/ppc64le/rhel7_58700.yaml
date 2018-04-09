@@ -69,7 +69,7 @@ vm_cmd_base:
  device:
   - 'nec-usb-xhci,id=usb1,bus=pci.0,addr=0x3'
   - 'virtio-scsi-pci,id=virtio_scsi_pci0,bus=pci.0,addr=0x4'
-  - 'scsi-hd,id=image1,drive=drive_image1'
+  - 'scsi-hd,id=image1,drive=drive_image1,bus=virtio_scsi_pci0.0,channel=0,scsi-id=0,lun=0,bootindex=0'
   - 'virtio-net-pci,mac=9a:8a:8b:8c:8d:8e,id=net0,vectors=4,netdev=tap0,bus=pci.0,addr=0x5'
   - 'usb-tablet,id=usb-tablet1,bus=usb1.0,port=1'
  drive:
