@@ -150,7 +150,7 @@ class TestCmd(Test):
         deadline = current_time + timeout
         pid = ''
         if echo_cmd == True:
-            Test.test_print(self, cmd)
+            Test.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         while sub.poll() == None:
@@ -197,7 +197,7 @@ class TestCmd(Test):
         stdout = []
         stderr = []
         if echo_cmd == True:
-            Test.test_print(self, cmd)
+            Test.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         t1 = threading.Thread(target=self.reader_select,

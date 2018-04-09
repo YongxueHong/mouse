@@ -19,7 +19,7 @@ class GuestSession(TestCmd):
         output = ''
         errput = ''
         allput = ''
-        TestCmd.test_print(self, cmd)
+        TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
         output, errput = self.exec_cmd_guest(ip=self.__ip, passwd=self.__passwd,
                                              cmd=cmd, timeout=timeout)
         # Here need to remove command echo and blank space again
