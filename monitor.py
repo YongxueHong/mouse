@@ -10,10 +10,8 @@ class RemoteMonitor(Test):
     def __init__(self, case_id, params, ip, port):
         Test.__init__(self, case_id=case_id, params=params)
         self._ip = ip
-        self._qmp_port = int(params.get('vm_cmd_base')
-                             ['qmp'][0].split(',')[0].split(':')[2])
-        self._serail_port = int(params.get('vm_cmd_base')
-                                ['serial'][0].split(',')[0].split(':')[2])
+        self._qmp_port = int(params.get('qmp_port'))
+        self._serial_port = int(params.get('serial_port'))
         self._guest_passwd = params.get('guest_passwd')
         self._port = port
         self.address = (ip, port)
@@ -47,7 +45,8 @@ class RemoteMonitor(Test):
             Test.test_error(self, 'Fail to send command to monitor(%s:%s).'
                             % (self._ip, self._port))
 
-    def rec_data(self, recv_timeout=DATA_AVAILABLE_TIMEOUT, max_recv_data=1024):
+    def rec_data(self, recv_timeout=DATA_AVAILABLE_TIMEOUT,
+                 max_recv_data=1024, search_str=None):
         s = ''
         data = ''
         max_recv_data = max_recv_data
@@ -57,10 +56,14 @@ class RemoteMonitor(Test):
             except socket.error:
                 Test.test_error(self, 'Fail to receive data from monitor(%s:%s).'
                                 % (self._ip, self._port))
-                return s
-
             if not data:
                 break
+            if search_str:
+                if re.findall(search_str, data):
+                    info = '===> Found the searched keyword \"%s\" on serial. ' \
+                           % search_str
+                    s += data + '\n' + info
+                    return s
             s += data
         return s
 
@@ -151,7 +154,7 @@ class RemoteSerialMonitor(RemoteMonitor):
         RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
         if re.findall(r'Login incorrect', output):
-            RemoteMonitor.test_print(self, info='Try to login agine.')
+            RemoteMonitor.test_print(self, info='Try to login again.')
             cmd = 'root'
             RemoteMonitor.send_cmd(self, cmd)
             output = RemoteMonitor.rec_data(self, recv_timeout=10)
@@ -166,8 +169,9 @@ class RemoteSerialMonitor(RemoteMonitor):
         ip = self.serial_get_ip()
         return ip
 
-    def serial_output(self, max_recv_data=1024):
-        output = RemoteMonitor.rec_data(self, max_recv_data=max_recv_data)
+    def serial_output(self, max_recv_data=1024, search_str=None):
+        output = RemoteMonitor.rec_data(self, max_recv_data=max_recv_data,
+                                        search_str=search_str)
         return output
 
     def serial_cmd(self, cmd):
