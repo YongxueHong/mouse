@@ -101,6 +101,8 @@ test_cases:
   name: "[migration] Migrate guest via a compressed file"
  rhel7_10026:
   name: "[migration] Do live migrate during vm reboot"
+ rhel7_10027:
+  name: "[migration] Do live migrate during vm boot"
  rhel7_10031:
   name: "[migration] Live migration support in virtio-blk-data-plane"
  rhel7_10035:
