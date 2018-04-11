@@ -135,6 +135,8 @@ test_cases:
   name: "[migration] Migrate guest during VM installation - scenario4 - offline migration"
  rhel7_10071:
   name: "[migration] Migrate guest during VM installation - scenario3 - copying files"
+ rhel7_10072:
+  name: "[migration] Migrate guest during VM installation - scenario2 - formatting disk"
  rhel7_10075:
   name: "[migration] Live migration via unix protocol"
  rhel7_10078:
