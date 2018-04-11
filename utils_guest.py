@@ -1,27 +1,33 @@
 import re
 import string
 from vm import TestCmd
+import paramiko
 
 class GuestSession(TestCmd):
     def __init__(self, ip, case_id, params):
         self.__ip = ip
         self.__passwd = params.get('guest_passwd')
+        self.__ssh = paramiko.SSHClient()
+        self.__ssh.load_system_host_keys()
+        self.__ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.__ssh.connect(hostname=ip, port=22, username='root',
+                    timeout=60, password=self.__passwd)
         TestCmd.__init__(self, case_id=case_id, params=params)
 
-    def exec_cmd_guest(self, ip, passwd, cmd, timeout):
-        output = ''
-        errput = ''
-        output, errput = TestCmd.remote_ssh_cmd(self, ip=ip, passwd=passwd,
-                                                cmd=cmd, timeout=timeout)
-        return output, errput
+    def close(self):
+        self.__ssh.close()
+
+    def __del__(self):
+        self.__ssh.close()
 
     def guest_cmd_output(self, cmd, timeout=300):
         output = ''
         errput = ''
         allput = ''
         TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
-        output, errput = self.exec_cmd_guest(ip=self.__ip, passwd=self.__passwd,
-                                             cmd=cmd, timeout=timeout)
+        stdin, stdout, stderr = self.__ssh.exec_command(command=cmd, timeout=timeout)
+        errput = stderr.read()
+        output = stdout.read()
         # Here need to remove command echo and blank space again
         output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
 

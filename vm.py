@@ -5,7 +5,6 @@ import socket
 import usr_exceptions
 import threading
 import re
-import paramiko
 import select
 
 class Test():
@@ -230,21 +229,6 @@ class TestCmd(Test):
                 count = count + 1
             output = "\n".join(lines)
         return output
-
-    # Fix command timeout unexpectedly sometimes.
-    def remote_ssh_cmd(self, ip, passwd, cmd, timeout=300):
-        errput = ''
-        output = ''
-        ssh = paramiko.SSHClient()
-        ssh.load_system_host_keys()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=ip, port=22, username='root',
-                    timeout=60, password=passwd)
-        stdin, stdout, stderr = ssh.exec_command(command=cmd, timeout=timeout)
-        errput = stderr.read()
-        output = stdout.read()
-        ssh.close()
-        return output, errput
 
 class CreateTest(Test, TestCmd):
     def __init__(self, case_id, params):
