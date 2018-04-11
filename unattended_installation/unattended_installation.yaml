@@ -28,6 +28,15 @@ test_cases:
   name:
    - "[Installation] Unattended installation."
 
+# Set the guest vnc port.
+vnc_port: '10'
+
+# Set the guest qmp port.
+qmp_port: '3333'
+
+# Set the guest serial port.
+serial_port: '4444'
+
 # qemu command line
 vm_cmd_base:
  name:
@@ -52,7 +61,7 @@ vm_cmd_base:
  netdev:
   - 'tap,id=tap0,vhost=on'
  vnc:
-  - ':20'
+  - ':{vnc_port}'
  rtc:
   - 'base=utc,clock=host'
  boot:
@@ -60,9 +69,9 @@ vm_cmd_base:
  enable-kvm:
   - 'None'
  qmp:
-  - 'tcp:0:7777,server,nowait'
+  - 'tcp:0:{qmp_port},server,nowait'
  serial:
-  - 'tcp:0:8888,server,nowait'
+  - 'tcp:0:{serial_port},server,nowait'
  monitor:
   - 'stdio'
 
