@@ -13,6 +13,8 @@ def run_case(params):
     qmp_port = int(params.get('qmp_port'))
     nfs_server_list = params.get('nfs_server')
     src_host_ip = params.get('src_host_ip')
+    guest_arch = params.get('guest_arch')
+    guest_name = params.get('vm_cmd_base')['name'][0]
 
     test = CreateTest(case_id='rhel7_10070', params=params)
     id = test.get_id()
@@ -139,10 +141,16 @@ def run_case(params):
 
     test.sub_step_log('1.8 cp vmlinuz and initrd.img form %s.' % iso_name)
     host_session.host_cmd_output('mount %s %s' % (iso_name, mnt_dir))
-    host_session.host_cmd_output('cp -f /%s/images/pxeboot/vmlinuz %s'
-                                 % (mnt_dir, isos_dir))
-    host_session.host_cmd_output('cp -f /%s/images/pxeboot/initrd.img %s'
-                                 % (mnt_dir, isos_dir))
+    if (guest_arch == 'x86_64'):
+        host_session.host_cmd_output('cp -f /%s/images/pxeboot/vmlinuz %s'
+                                     % (mnt_dir, isos_dir))
+        host_session.host_cmd_output('cp -f /%s/images/pxeboot/initrd.img %s'
+                                     % (mnt_dir, isos_dir))
+    elif (guest_arch == 'ppc64le'):
+        host_session.host_cmd_output('cp -f /%s/ppc/ppc64/vmlinuz %s'
+                                     % (mnt_dir, isos_dir))
+        host_session.host_cmd_output('cp -f /%s/ppc/ppc64/initrd.img %s'
+                                     % (mnt_dir, isos_dir))
     host_session.host_cmd_output('umount %s' % mnt_dir)
 
     test.sub_step_log('1.9 Check the name of mounted ks.iso.')
@@ -223,6 +231,13 @@ def run_case(params):
         output = src_remote_qmp.qmp_cmd_output(cmd)
         if re.findall(r'postmigrate', output):
             cmd = '{ "execute": "quit" }'
+            guest_chk = "ps -aux | grep %s | grep -vE grep" % guest_name
+            output = host_session.host_cmd_output(cmd=guest_chk,
+                                                  echo_cmd=False, verbose=False)
+            if output:
+                guest_pid = re.split(r"\s+", output)[1]
+                host_session.host_cmd_output('kill -9 %s' % guest_pid,
+                                             echo_cmd=False)
             src_remote_qmp.qmp_cmd_output(cmd)
             flag_timeout = False
             break

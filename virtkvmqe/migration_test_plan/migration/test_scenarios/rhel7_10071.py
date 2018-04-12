@@ -15,6 +15,7 @@ def run_case(params):
     nfs_server_list = params.get('nfs_server')
     src_host_ip = params.get('src_host_ip')
     dst_host_ip = params.get('dst_host_ip')
+    guest_arch = params.get('guest_arch')
 
     test = CreateTest(case_id='rhel7_10071', params=params)
     id = test.get_id()
@@ -141,10 +142,16 @@ def run_case(params):
 
     test.sub_step_log('1.8 cp vmlinuz and initrd.img form %s.' % iso_name)
     host_session.host_cmd_output('mount %s %s' % (iso_name, mnt_dir))
-    host_session.host_cmd_output('cp -f /%s/images/pxeboot/vmlinuz %s'
-                                 % (mnt_dir, isos_dir))
-    host_session.host_cmd_output('cp -f /%s/images/pxeboot/initrd.img %s'
-                                 % (mnt_dir, isos_dir))
+    if (guest_arch == 'x86_64'):
+        host_session.host_cmd_output('cp -f /%s/images/pxeboot/vmlinuz %s'
+                                     % (mnt_dir, isos_dir))
+        host_session.host_cmd_output('cp -f /%s/images/pxeboot/initrd.img %s'
+                                     % (mnt_dir, isos_dir))
+    elif (guest_arch == 'ppc64le'):
+        host_session.host_cmd_output('cp -f /%s/ppc/ppc64/vmlinuz %s'
+                                     % (mnt_dir, isos_dir))
+        host_session.host_cmd_output('cp -f /%s/ppc/ppc64/initrd.img %s'
+                                     % (mnt_dir, isos_dir))
     host_session.host_cmd_output('umount %s' % mnt_dir)
 
     test.sub_step_log('1.9 Check the name of mounted ks.iso.')
@@ -204,10 +211,12 @@ def run_case(params):
     install_timeout = time.time() + int(params.get('install_timeout'))
     install_done = False
     started_install = False
+    search_str = 'Installing libgcc'
     while time.time() < install_timeout:
-        output = src_serial.serial_output()
+        output = src_serial.serial_output(max_recv_data=128,
+                                          search_str=search_str)
         test.test_print(output)
-        if re.findall(r'Installing', output):
+        if re.findall(r'Found the searched keyword', output):
             started_install = True
             break
 
