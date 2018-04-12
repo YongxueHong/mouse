@@ -121,6 +121,8 @@ test_cases:
   name: "[migration] Stop VM after migration begins"
  rhel7_10056:
   name: "[migration] Set migration speed(max-bandwidth) after migration begins"
+ rhel7_10057:
+  name: "[migration] Set migration downtime after migration begins"
  rhel7_10059:
   name: "[migration] Ping-pong migration during file transfer"
  rhel7_10061:
