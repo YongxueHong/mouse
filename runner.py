@@ -32,15 +32,44 @@ class CaseRunner():
         self.get_case_list()
         self._run_result['TOTAL'] = len(self._case_list)
 
-    def display_process_bar(self, processor):
+    def timeout_log_file(self, case):
+        log_file_list = []
+        test_log_dir = os.path.join(self._params.get('log_dir'),
+                                    case + '_logs')
+        log = test_log_dir + '/' + 'long_debug.log'
+        log_file_list.append(log)
+        log = test_log_dir + '/' + 'short_debug.log'
+        log_file_list.append(log)
+        timeout_info = 'Failed to run %s under %s sec.' \
+                       % (case, self._params.get('timeout'))
+        for log in log_file_list:
+            if os.path.exists(log):
+                if self._params.get('verbose') == 'no':
+                    with open(log, "a") as run_log:
+                        timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
+                        run_log.write("%s: %s\n" % (timestamp, timeout_info))
+                if self._params.get('verbose') == 'yes':
+                    with open(log, "a") as run_log:
+                        timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
+                        run_log.write("%s: %s\n" % (timestamp, timeout_info))
+                    print timeout_info
+
+    def display_process_bar(self, processor, start_time):
         sys.stdout.write(' ')
         sys.stdout.flush()
+        run_timeout = False
         while processor.is_alive():
             for bar in self._bars:
+                if float(time.time() - start_time) > \
+                        float(int(self._params.get('timeout'))):
+                    run_timeout = True
+                    break
                 sys.stdout.write('\b')
                 sys.stdout.write(bar)
                 sys.stdout.flush()
                 time.sleep(0.5)
+            if run_timeout == True:
+                break
 
     def get_case_list(self):
         if self._only_case_list:
@@ -100,6 +129,7 @@ class CaseRunner():
                     if self._params.get('verbose') == 'no':
                         traceback.print_exc(file=open(log_file, "a"))
                     if self._params.get('verbose') == 'yes':
+                        traceback.print_exc(file=open(log_file, "a"))
                         traceback.print_exc()
             case_queue.put(case)
 
@@ -112,7 +142,6 @@ class CaseRunner():
                    % (('=' * 25), self._requirement_id.upper().replace('_', '-'),
                       self._requirement_name, ('=' * 25),))
         for case in self._case_list:
-            self._sub_start_time = time.time()
             if self._params.get('verbose') == 'no':
                 info = '--> Running case(%s/%s): %s-%s ' \
                        % (cont, self._run_result['TOTAL'],
@@ -123,13 +152,21 @@ class CaseRunner():
             sub_proc = multiprocessing.Process(target=self._run,
                                                args=(case, case_queue))
             sub_proc.start()
+            self._sub_start_time = time.time()
             sub_proc.name = case
             if self._params.get('verbose') == 'no':
-                self.display_process_bar(sub_proc)
-            sub_proc.join()
+                self.display_process_bar(sub_proc, start_time=self._sub_start_time)
+            else:
+                sub_proc.join(timeout=float(int(self._params.get('timeout'))))
 
             self._sub_end_time = time.time()
             self._sub_run_time = self._sub_end_time - self._sub_start_time
+
+            if float(self._sub_run_time) > float(int(self._params.get('timeout'))):
+                sub_proc.terminate()
+                self._run_result['error_cases'].append(case)
+                self.timeout_log_file(case)
+
             if not case_queue.empty():
                 self._run_result['error_cases'].append(case_queue.get())
             if self._params.get('verbose') == 'no':

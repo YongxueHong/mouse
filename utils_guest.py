@@ -49,3 +49,15 @@ class GuestSession(TestCmd):
             info = 'system device : %s' % system_dev
             TestCmd.test_print(self, info=info)
         return system_dev, output
+
+    def guest_ping_test(self, dst_ip, count):
+        cmd_ping = 'ping %s -c %d' % (dst_ip, count)
+        output = self.guest_cmd_output(cmd=cmd_ping)
+        if re.findall(r'100% packet loss', output):
+            TestCmd.test_error(self, 'Ping failed')
+
+    def guest_dmesg_check(self):
+        cmd = 'dmesg'
+        output = self.guest_cmd_output(cmd)
+        if re.findall(r'Call Trace:', output):
+            TestCmd.test_error(self, 'Guest hit call trace')
