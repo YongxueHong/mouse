@@ -6,7 +6,8 @@ from vm import Test
 
 class RemoteMonitor(Test):
     CONNECT_TIMEOUT = 60
-    DATA_AVAILABLE_TIMEOUT = 0
+    # The value of DATA_AVAILABLE_TIMEOUT is set 0.1 at least.
+    DATA_AVAILABLE_TIMEOUT = 0.1
     def __init__(self, case_id, params, ip, port):
         Test.__init__(self, case_id=case_id, params=params)
         self._ip = ip

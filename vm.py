@@ -112,14 +112,6 @@ class Test():
         self.test_print(info=pass_info)
         self.total_test_time(start_time=self.start_time)
 
-    def test_timeout_daemon(self, passed, endtime):
-        while time.time() < endtime:
-            if passed == True:
-                break
-        if passed == False:
-            err_info = 'Case Error: ' + 'RUN TIMEOUT'
-            self.log_echo_file(log_str=err_info)
-
     def main_step_log(self, log):
         log_tag = '='
         log_tag_rept = 7
@@ -239,13 +231,6 @@ class CreateTest(Test, TestCmd):
         self.src_ip = params.get('src_host_ip')
         self.timeout = params.get('timeout')
         self.passwd =params.get('host_passwd')
-        passed = False
-        endtime = time.time() + float(params.get('timeout'))
-        thread = threading.Thread(target=Test.test_timeout_daemon,
-                                  args=(self, passed, endtime,))
-        thread.name = 'TimeoutThread'
-        thread.daemon = True
-        thread.start()
         Test.__init__(self, self.id, self.params)
         self.guest_name = params.get('vm_cmd_base')['name'][0]
         self.clear_env()
@@ -290,12 +275,18 @@ class CreateTest(Test, TestCmd):
             TestCmd.test_print(self, info)
 
     def kill_guest_process(self, pid):
-        cmd = 'kill -9 %s' % pid
-        TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
+            cmd = 'kill -9 %s' % pid
+            TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
+            # Just workaround with time.sleep(),
+            # need to update the function subprocess_cmd_base.
+            time.sleep(2)
 
     def kill_dst_guest_process(self, pid):
             cmd = 'ssh root@%s kill -9 %s' %(self.dst_ip, pid)
             TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
+            # Just workaround with time.sleep(),
+            # need to update the function subprocess_cmd_base.
+            time.sleep(2)
 
     def clear_env(self):
         pid_list = []
