@@ -204,3 +204,9 @@ class HostSession(TestCmd):
         time.sleep(3)
         dst_pid = self.get_guest_pid(cmd, dst_ip=ip)
         self.show_qemu_cmd()
+
+    def create_image(self, cmd):
+        output = self.host_cmd_output(cmd=cmd)
+        if re.findall(r'qemu-img', output):
+            err_info = 'Failed to create image.'
+            TestCmd.test_error(self, err_info)
