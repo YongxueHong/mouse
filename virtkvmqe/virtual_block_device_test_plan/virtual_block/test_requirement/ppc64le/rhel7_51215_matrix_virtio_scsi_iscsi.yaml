@@ -24,7 +24,7 @@ iscsi_target_iqn_name: 'iqn.xxxx-xx.com.xxx:xxxxx/x'
 
 # Set the test requirement info.
 test_requirement:
- name: "Virtual block (virtio-scsi + iscsi) - ppc64le"
+ name: "Virtual block [virtio-scsi + iscsi] - ppc64le"
 
 # Set the incoming port for migration.
 incoming_port: '4000'

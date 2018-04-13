@@ -22,7 +22,7 @@ host_ip: 'xxx.xxx.xxx.xxx'
 
 # Set the test requirement info.
 test_requirement:
- name: "Virtual block (virtio-scsi + local) - ppc64le"
+ name: "Virtual block [virtio-scsi + local] - ppc64le"
 
 # Set the incoming port for migration.
 incoming_port: '4000'
@@ -94,9 +94,9 @@ vm_cmd_base:
 
 # Set the test case info linked to this test requirement.
 test_cases:
+ rhel7_11912_virtio_scsi_local:
+  name: "[virtual block] do \"system_reset\" when guest boot for at least 10 times"
 
 verbose: 'no'
 # Set the time out for each test case.
 timeout: '3600'
-
-
