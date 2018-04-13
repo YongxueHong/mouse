@@ -96,6 +96,8 @@ vm_cmd_base:
 test_cases:
  rhel7_11912_virtio_scsi_local:
   name: "[virtual block] do \"system_reset\" when guest boot for at least 10 times"
+ rhel_114178_virtio_scsi_local:
+  name: "[virtual block] blockdev backing file"
 
 verbose: 'no'
 # Set the time out for each test case.
