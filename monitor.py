@@ -176,14 +176,18 @@ class RemoteSerialMonitor(RemoteMonitor):
         return output
 
     def serial_cmd(self, cmd):
-        RemoteMonitor.test_print(self, info=cmd, serial_debug=True)
+        RemoteMonitor.test_print(self,
+                                 info='[root@host ~]# %s' % cmd,
+                                 serial_debug=True)
         RemoteMonitor.send_cmd(self, cmd)
 
     def serial_cmd_output(self, cmd, echo_cmd=True, verbose=True,
                           recv_timeout=3, timeout=300):
         output = ''
         if echo_cmd == True:
-            RemoteMonitor.test_print(self, info=cmd, serial_debug=True)
+            RemoteMonitor.test_print(self,
+                                     info='[root@host ~]# %s' % cmd,
+                                     serial_debug=True)
         RemoteMonitor.send_cmd(self, cmd)
         endtime = time.time() + timeout
         while time.time() < endtime:
@@ -216,3 +220,13 @@ class RemoteSerialMonitor(RemoteMonitor):
                     RemoteMonitor.test_error(self, 'Could not get ip address!')
                 return ip
 
+    def serial_shutdown_vm(self, timeout=600):
+        output = self.serial_cmd_output('shutdown -h now',
+                                        recv_timeout=60,
+                                        timeout=timeout)
+        if not re.findall(r'Power down', output):
+            RemoteMonitor.test_error(
+                self, 'Failed to shutdown vm under %s sec.' % timeout)
+        if re.findall(r'Call Trace', output):
+            RemoteMonitor.test_error(
+                self, 'Guest hit call trace.')

@@ -35,4 +35,10 @@ def run_case(params):
 
     test.sub_step_log('Connecting to serial')
     serial = RemoteSerialMonitor(id, params, host_ip, serial_port)
-    serial.serial_login()
+    vm_ip = serial.serial_login()
+
+    guest_session = GuestSession(vm_ip, id, params)
+    guest_session.guest_cmd_output('lsblk')
+    guest_session.guest_cmd_output('lsscsi')
+
+    serial.serial_shutdown_vm()
