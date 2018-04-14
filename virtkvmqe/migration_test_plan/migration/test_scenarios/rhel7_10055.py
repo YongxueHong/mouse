@@ -10,10 +10,8 @@ from utils_migration import query_migration
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
     dst_host_ip = params.get('dst_host_ip')
-    qmp_port = int(params.get('qmp_port')
-                   ['qmp'][0].split(',')[0].split(':')[2])
-    serial_port = int(params.get('vm_cmd_base')
-                      ['serial'][0].split(',')[0].split(':')[2])
+    qmp_port = int(params.get('qmp_port'))
+    serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
 
     test = CreateTest(case_id='rhel7_10055', params=params)
