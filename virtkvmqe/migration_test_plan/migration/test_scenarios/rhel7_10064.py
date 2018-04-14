@@ -103,7 +103,7 @@ def run_case(params):
     dst_remote_qmp.qmp_cmd_output('{"execute":"cont"}')
     output=dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
     if not re.findall(r'"status": "running"', output):
-        dst_remote_qmp.test.error('migration status Error')
+        dst_remote_qmp.test_error('migration status Error')
 
     test.main_step_log('7. Check if guest works well.')
     test.sub_step_log('7.1 Guest mouse and keyboard.')
