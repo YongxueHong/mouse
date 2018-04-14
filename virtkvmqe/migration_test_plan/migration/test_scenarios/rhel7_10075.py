@@ -7,8 +7,8 @@ from vm import CreateTest
 from utils_migration import query_migration
 
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = SRC_HOST_IP
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = src_host_ip
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     vnc_port = int(params.get('vnc_port'))
@@ -21,11 +21,11 @@ def run_case(params):
     test.main_step_log('1. Boot a guest on source host.')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('1.1 Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
 
     test.main_step_log('2. start listening port in the same host')
     vnc_port_new = int(vnc_port + 1)
@@ -45,7 +45,7 @@ def run_case(params):
 
     dst_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=dst_qemu_cmd, vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port_new)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port_new)
 
     test.main_step_log('3. do live migration')
     test.sub_step_log('3.1 Check whether the socket exists')
@@ -69,14 +69,18 @@ def run_case(params):
         
     test.main_step_log('4. After migration, check if guest works well.')
     test.sub_step_log('4.1 Reboot guest')
-    dst_serial = RemoteSerialMonitor(id, params, DST_HOST_IP, serial_port_new)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port_new)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd)
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
     dst_serial.serial_cmd(cmd='reboot')
-    DST_GUEST_IP = dst_serial.serial_login()
+    dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('4.2. Ping external host/copy file between guest and host')
     external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=DST_GUEST_IP)
+    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
         dst_guest_session.test_error('Ping failed')

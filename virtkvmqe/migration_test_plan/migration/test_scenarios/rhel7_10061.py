@@ -8,8 +8,8 @@ from utils_migration import do_migration, query_migration
 import threading
 
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = params.get('dst_host_ip')
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = params.get('dst_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
@@ -25,12 +25,12 @@ def run_case(params):
     test.main_step_log('1. Start VM in the src host, guest running stress')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('1.1 Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
-    src_guest_session = GuestSession(case_id=id, params=params, ip=SRC_GUEST_IP)
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
+    src_guest_session = GuestSession(case_id=id, params=params, ip=src_guest_ip)
 
     test.sub_step_log('1.2 Running stress in src guest')
     chk_cmd = 'yum list installed | grep stress.`arch`'
@@ -58,13 +58,13 @@ def run_case(params):
     incoming_val = 'tcp:0:%s' % incoming_port
     params.vm_base_cmd_add('incoming', incoming_val)
     dst_qemu_cmd = params.create_qemu_cmd()
-    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=DST_HOST_IP,
+    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('3. Do live migration')
     cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%s"}}' % (
-    DST_HOST_IP, incoming_port)
+    dst_host_ip, incoming_port)
     src_remote_qmp.qmp_cmd_output(cmd=cmd)
 
     test.sub_step_log('Check the status of migration')
@@ -86,7 +86,7 @@ def run_case(params):
     test.main_step_log('5. Start listening mode againg in the dst host')
     test.sub_step_log('5.1 Check if the dst qemu quit automatically')
     dst_chk_cmd = 'ssh root@%s ps -axu | grep %s | grep -v grep' \
-                  % (DST_HOST_IP, guest_name)
+                  % (dst_host_ip, guest_name)
     output = src_host_session.host_cmd_output(cmd=dst_chk_cmd)
     if not output:
         src_host_session.test_print('DST QEMU quit automatically after '
@@ -95,13 +95,13 @@ def run_case(params):
         src_host_session.test_error('DST QEMU does not quit automatically '
                                     'after src cancelling migration')
     test.sub_step_log('5.2 Start listening mode again in dst host')
-    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=DST_HOST_IP,
+    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('6. Do live migration again')
     flag = do_migration(remote_qmp=src_remote_qmp,
-                        migrate_port=incoming_port, dst_ip=DST_HOST_IP,
+                        migrate_port=incoming_port, dst_ip=dst_host_ip,
                         chk_timeout=chk_time_1)
     if (flag == False):
         test.sub_step_log('6.1 Enlarge the value of downtime and speed')
@@ -127,16 +127,19 @@ def run_case(params):
     test.main_step_log('7. After migration succeed, '
                        'checking  the status of guest on the dst host')
     test.sub_step_log('7.1 Guest keyboard and mouse work normally.')
-
     test.sub_step_log('7.2 Reboot guest')
-    dst_serial = RemoteSerialMonitor(id, params, DST_HOST_IP, serial_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output):
+       test.test_error('Guest hit call trace')
     dst_serial.serial_cmd(cmd='reboot')
-    DST_GUEST_IP = dst_serial.serial_login()
+    dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('7.3 Ping external host/copy file between guest and host')
     external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=DST_GUEST_IP)
+    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
         dst_guest_session.test_error('Ping failed')

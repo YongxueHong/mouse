@@ -8,8 +8,8 @@ from utils_migration import do_migration
 import threading
 
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = params.get('dst_host_ip')
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = params.get('dst_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
@@ -24,12 +24,12 @@ def run_case(params):
     test.main_step_log('1. Start VM with high load, with each method is ok')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('1.1 Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
-    src_guest_session = GuestSession(case_id=id, params=params, ip=SRC_GUEST_IP)
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
+    src_guest_session = GuestSession(case_id=id, params=params, ip=src_guest_ip)
 
     test.sub_step_log('1.2 Running iozone in src guest')
     cmd='yum list installed | grep ^gcc.`arch`'
@@ -76,9 +76,9 @@ def run_case(params):
     incoming_val = 'tcp:0:%s' % incoming_port
     params.vm_base_cmd_add('incoming', incoming_val)
     dst_qemu_cmd = params.create_qemu_cmd()
-    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=DST_HOST_IP,
+    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('3. Set a reasonable downtime value for migration')
     downtime_cmd = '{"execute":"migrate-set-parameters","arguments":' \
@@ -93,21 +93,25 @@ def run_case(params):
 
     test.main_step_log('4.Do live migration')
     check_info = do_migration(remote_qmp=src_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=DST_HOST_IP,
+                              migrate_port=incoming_port, dst_ip=dst_host_ip,
                               chk_timeout=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout after changing downtime')
 
     test.main_step_log('5. Check the status of guest on dst host')
     test.sub_step_log('5.1. Reboot guest')
-    dst_serial = RemoteSerialMonitor(id, params, DST_HOST_IP, serial_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd)
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
     dst_serial.serial_cmd(cmd='reboot')
-    DST_GUEST_IP = dst_serial.serial_login()
+    dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('5.2 Ping external host')
     external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=DST_GUEST_IP)
+    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
         dst_guest_session.test_error('Ping failed')
