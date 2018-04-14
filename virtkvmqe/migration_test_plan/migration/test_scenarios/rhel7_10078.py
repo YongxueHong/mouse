@@ -14,15 +14,16 @@ def run_case(params):
     incoming_port = params.get('incoming_port')
     test = CreateTest(case_id='rhel7_10078', params=params)
     id = test.get_id()
+    guest_name = test.guest_name
     src_host_session = HostSession(id, params)
     balloon_val = '1073741824'
+    chk_timeout = 180
 
     test.main_step_log('1. Boot guest on src host with memory balloon device.')
     params.vm_base_cmd_add('device',
                            'virtio-balloon-pci,id=balloon0,bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('1.1 Connecting to src serial')
     src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
@@ -30,14 +31,18 @@ def run_case(params):
 
     test.main_step_log('2 Check if memory balloon device works.')
     test.sub_step_log('2.1 Check if balloon device exists')
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-balloon"}',
-                                           recv_timeout=5)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
+    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-balloon"}')
+    original_val = eval(output).get('return').get('actual')
     if re.findall(r'No balloon', output):
         src_remote_qmp.test_error('No balloon device has been activated.')
 
     test.sub_step_log('2.2 Change the value of balloon to %s bytes'
                       % balloon_val)
     change_balloon_val(new_value=balloon_val, remote_qmp=src_remote_qmp)
+
+    test.sub_step_log('2.3 Restore balloon to original value')
+    change_balloon_val(new_value=original_val, remote_qmp=src_remote_qmp)
 
     test.main_step_log('3. Hot unplug this memory balloon from guest.')
     cmd = '{"execute":"device_del","arguments":{"id":"balloon0"}}'
@@ -72,10 +77,6 @@ def run_case(params):
 
     test.main_step_log('6. Check guest on des, guest should work well.')
     dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
-    cmd = 'dmesg'
-    output = dst_serial.serial_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        test.test_error('Guest hit call trace')
     test.sub_step_log('Reboot dst guest and get ip of destination guest')
     dst_serial.serial_cmd(cmd='reboot')
     dst_guest_ip = dst_serial.serial_login()
@@ -93,25 +94,37 @@ def run_case(params):
 
     test.main_step_log('8. Repeat step2')
     change_balloon_val(new_value=balloon_val, remote_qmp=dst_remote_qmp)
+    change_balloon_val(new_value=original_val, remote_qmp=dst_remote_qmp)
 
     test.main_step_log('9. Quit qemu on src host. Then boot guest with '
-                       '\'-incoming\'on src host, and with '
-                       'memory balloon device')
+                       '\'-incoming\' on src host')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
         test.test_error('Failed to quit qemu on src host')
-    time.sleep(10)
+    flag = False
+    end_time = time.time() + chk_timeout
+    while (time.time() < end_time):
+        src_chk_cmd = "ps -aux | grep %s | grep -vE 'grep|ssh'" \
+                      % guest_name
+        output = src_host_session.host_cmd_output(cmd=src_chk_cmd)
+        if output:
+            src_pid = re.split(r"\s+", output)[1]
+            src_host_session.host_cmd_output('kill -9 %s' % src_pid)
+        else:
+            flag = True
+            break
+    if (flag == False):
+        src_host_session.test_error('Failed to quit src qemu')
     params.vm_base_cmd_add('device', 'virtio-balloon-pci,id=balloon0,'
                                      'bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
     src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
-    output = eval(src_remote_qmp.qmp_cmd_output('{"execute":"query-balloon"}'))
-    balloon_val_1 = output.get('return').get('actual')
+    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-balloon"}')
+    if re.findall(r'No balloon', output):
+        src_remote_qmp.test_error('src host do not has balloon device')
 
-    test.main_step_log('10. Set the dst balloon value same with src balloon, '
-                       'then do migration')
-    change_balloon_val(new_value=balloon_val_1, remote_qmp=dst_remote_qmp)
+    test.main_step_log('10. Do migration from dst to src')
     flag = do_migration(remote_qmp=dst_remote_qmp,
                         migrate_port=incoming_port, dst_ip=src_host_ip)
     if (flag == False):
@@ -121,29 +134,23 @@ def run_case(params):
                        'ping external host,and shutdown.')
     test.sub_step_log('11.1 Reboot src guest')
     src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
-    cmd = 'dmesg'
-    output = src_serial.serial_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        test.test_error('Guest hit call trace')
     src_serial.serial_cmd(cmd='reboot')
-    src_guest_ip = src_serial.serial_login()
+    src_serial.serial_login()
 
     test.sub_step_log('11.2 Ping external host and shutdown guest')
-    src_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=src_guest_ip)
     external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
-    output = src_guest_session.guest_cmd_output(cmd=cmd_ping)
+    output = src_serial.serial_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
-        src_guest_session.test_error('Ping failed')
+        src_serial.test_error('Ping failed')
 
     test.sub_step_log('11.3 quit qemu on dst end and shutdown vm on src end')
     output = src_serial.serial_cmd_output('shutdown -h now')
     if re.findall(r'Call trace', output):
         src_serial.test_error('Guest hit Call trace during shutdown')
 
-    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
-                                           recv_timeout=3)
+    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
         dst_remote_qmp.test_error('Failed to quit qemu on dst host')
+
 
