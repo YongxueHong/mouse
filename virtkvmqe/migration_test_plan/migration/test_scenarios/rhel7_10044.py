@@ -120,13 +120,17 @@ def run_case(params):
     test.main_step_log('6 Check the status of guest')
     test.sub_step_log('6.1. Reboot guest')
     dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output):
+       test.test_error('Guest hit call trace')
     dst_serial.serial_cmd(cmd='reboot')
-    DST_GUEST_IP = dst_serial.serial_login()
+    dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('6.2 Ping external host')
     external_host_ip = dst_host_ip
     cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=DST_GUEST_IP)
+    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
         dst_guest_session.test_error('Ping failed')

@@ -5,16 +5,16 @@ from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
 import threading
-
+from utils_migration import query_migration
 
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = params.get('dst_host_ip')
-    qmp_port = int(params.get('vm_cmd_base')
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = params.get('dst_host_ip')
+    qmp_port = int(params.get('qmp_port')
                    ['qmp'][0].split(',')[0].split(':')[2])
     serial_port = int(params.get('vm_cmd_base')
                       ['serial'][0].split(',')[0].split(':')[2])
-    incoming_port = int(params.get('incoming_port'))
+    incoming_port = params.get('incoming_port')
 
     test = CreateTest(case_id='rhel7_10055', params=params)
     id = test.get_id()
@@ -23,13 +23,13 @@ def run_case(params):
 
     test.main_step_log('1. Start VM in src host ')
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
     src_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=SRC_GUEST_IP)
+                                     ip=src_guest_ip)
 
     test.sub_step_log('Check dmesg info ')
     cmd = 'dmesg'
@@ -38,12 +38,12 @@ def run_case(params):
         src_guest_session.test_error('Guest hit call trace')
 
     test.main_step_log('2. Start listening mode in dst host ')
-    incoming_val = 'tcp:0:%d' % (incoming_port)
+    incoming_val = 'tcp:0:%s' % (incoming_port)
     params.vm_base_cmd_add('incoming', incoming_val)
     dst_qemu_cmd = params.create_qemu_cmd()
-    src_host_session.boot_remote_guest(ip=DST_HOST_IP, cmd=dst_qemu_cmd,
+    src_host_session.boot_remote_guest(ip=dst_host_ip, cmd=dst_qemu_cmd,
                                        vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('3. Log in to the src guest and '
                        ' Do I/O operations load(iozone) in the guest')
@@ -83,8 +83,8 @@ def run_case(params):
         src_guest_session.test_error('iozone excute or install Error')
 
     test.main_step_log('4. Migrate to the destination')
-    cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%d"}}' % \
-          (DST_HOST_IP, incoming_port)
+    cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%s"}}' % \
+          (dst_host_ip, incoming_port)
     src_remote_qmp.qmp_cmd_output(cmd)
 
     test.main_step_log('5.Stop guest during migration')
@@ -96,18 +96,8 @@ def run_case(params):
     cmd = '{"execute":"stop"}'
     src_remote_qmp.qmp_cmd_output(cmd)
     test.sub_step_log('Check the status of migration')
-    cmd = '{"execute":"query-migrate"}'
-    timeout = 1200
-    timeover = time.time() + timeout
-    migration_flag = False
-    while time.time() < timeover:
-        output = src_remote_qmp.qmp_cmd_output(cmd)
-        if re.findall(r'"remaining": 0', output):
-            migration_flag = True
-            break
-        if re.findall(r'"status": "failed"', output):
-            src_remote_qmp.test_error('migration failed')
-    if migration_flag != True:
+    flag = query_migration(src_remote_qmp)
+    if (flag == False):
         src_remote_qmp.test_error('migration timeout')
     
     test.main_step_log('6.Check status of guest in des host, should be paused')
@@ -122,15 +112,15 @@ def run_case(params):
     test.sub_step_log('check dmesg info')
     dst_remote_qmp.qmp_cmd_output('{"execute":"cont"}')
     dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
-    dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=DST_HOST_IP,
+    dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
-    dst_serial.serial_cmd(cmd='reboot')
-    DEST_GUEST_IP = dst_serial.serial_login()
-    guest_session = GuestSession(case_id=id, params=params, ip=DEST_GUEST_IP)
     cmd = 'dmesg'
-    output = guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        guest_session.test_error('Guest hit call trace')
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
+    dst_serial.serial_cmd(cmd='reboot')
+    dst_guest_ip = dst_serial.serial_login()
+    guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
 
     test.sub_step_log('quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',

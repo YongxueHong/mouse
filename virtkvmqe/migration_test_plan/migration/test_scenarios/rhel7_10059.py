@@ -35,7 +35,6 @@ def run_case(params):
     test.sub_step_log('Connecting to src serial')
     src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
     src_guest_ip = src_serial.serial_login()
-    dst_guest_ip = src_guest_ip
     src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
     src_guest_session = GuestSession(case_id=id, params=params, ip=src_guest_ip)
 
@@ -67,13 +66,14 @@ def run_case(params):
 
     test.main_step_log('5. Start migration')
     do_migration(src_remote_qmp, incoming_port, dst_host_ip)
-    test.sub_step_log('Login dst guest')
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
-    test.sub_step_log('Check dmesg info ')
+    test.sub_step_log('Check dmesg dst guest')
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
     cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd)
+    output = dst_serial.serial_cmd_output(cmd)
     if re.findall(r'Call Trace:', output):
-        dst_guest_session.test_error('Guest hit call trace')
+        dst_serial.test_error('Guest hit call trace')
+    dst_serial.serial_cmd(cmd='reboot')
+    dst_guest_ip = dst_serial.serial_login()
 
     test.main_step_log('6. Ping-pong migrate until file transfer finished')
     src_remote_qmp, dst_remote_qmp = ping_pong_migration(params,
@@ -126,10 +126,19 @@ def run_case(params):
         test.test_error('Value of md5sum error!')
 
     test.sub_step_log('Login dst guest after ping-pong migration')
-
     dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     test.sub_step_log('Check dmesg info ')
     cmd = 'dmesg'
     output = dst_guest_session.guest_cmd_output(cmd)
     if re.findall(r'Call Trace:', output):
         dst_guest_session.test_error('Guest hit call trace')
+
+    output = dst_serial.serial_cmd_output('shutdown -h now')
+    if re.findall(r'Call trace', output):
+        dst_serial.test_error('Guest hit Call trace during shutdown')
+
+    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
+                                           recv_timeout=3)
+    if output:
+        src_remote_qmp.test_error('Failed to quit qemu on src host')
+

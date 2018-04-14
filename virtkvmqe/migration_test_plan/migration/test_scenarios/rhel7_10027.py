@@ -96,8 +96,12 @@ def run_case(params):
         test.test_error('Guest boot up failed under %s sec' % timeout)
 
     test.sub_step_log('4.1 Guest mouse and keyboard.')
-
     test.sub_step_log('4.2. Reboot guest')
+    test.sub_step_log('check dmesg info')
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output) or not output:
+        test.test_error('Guest hit call trace')
     dst_serial.serial_cmd_output(cmd='reboot')
     dst_guest_ip = dst_serial.serial_login()
 
@@ -119,3 +123,7 @@ def run_case(params):
     output = dst_serial.serial_cmd_output('shutdown -h now')
     if re.findall(r'Call trace', output):
         dst_serial.test_error('Guest hit Call trace during shutdown')
+
+    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
+    if output:
+        src_remote_qmp.test_error('Failed to quit qemu on src end')

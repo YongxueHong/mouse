@@ -14,10 +14,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname
                                             (os.path.dirname
                                              (os.path.abspath(__file__))))))
 
-
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = params.get('dst_host_ip')
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = params.get('dst_host_ip')
     incoming_port = str(params.get('incoming_port'))
     serial_port = int(params.get('serial_port'))
     qmp_port = int(params.get('qmp_port'))
@@ -34,13 +33,13 @@ def run_case(params):
 
     test.main_step_log('1. Start VM in src host ')
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
     src_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=SRC_GUEST_IP)
+                                     ip=src_guest_ip)
 
     test.sub_step_log('Check dmesg info ')
     cmd = 'dmesg'
@@ -52,9 +51,9 @@ def run_case(params):
     incoming_val = 'tcp:0:%s' % (incoming_port)
     params.vm_base_cmd_add('incoming', incoming_val)
     dst_qemu_cmd = params.create_qemu_cmd()
-    src_host_session.boot_remote_guest(ip=DST_HOST_IP, cmd=dst_qemu_cmd,
+    src_host_session.boot_remote_guest(ip=dst_host_ip, cmd=dst_qemu_cmd,
                                        vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('3. src guest have '
                        'programme running to generate dirty page')
@@ -65,7 +64,7 @@ def run_case(params):
                                                  % (BASE_DIR, script),
                                       remote_path='/home/%s' % script,
                                       passwd=guest_passwd,
-                                      remote_ip=SRC_GUEST_IP, timeout=300)
+                                      remote_ip=src_guest_ip, timeout=300)
     chk_cmd = 'ls /home | grep -w "%s"' % script
     output = src_guest_session.guest_cmd_output(cmd=chk_cmd)
     if not output:
@@ -99,7 +98,7 @@ def run_case(params):
 
     test.main_step_log('4. Migrate to the destination')
     cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%s"}}' % \
-          (DST_HOST_IP, incoming_port)
+          (dst_host_ip, incoming_port)
     src_remote_qmp.qmp_cmd_output(cmd)
 
     test.main_step_log('5.set downtime for migration')
@@ -138,22 +137,21 @@ def run_case(params):
     if re.findall(r'Call Trace:', output):
         src_guest_session.test_error('Guest hit call trace')
 
-    dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=DST_HOST_IP,
+    dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
     dst_serial.serial_cmd(cmd='reboot')
-    DST_GUEST_IP=dst_serial.serial_login()
-    external_host_ip = DST_HOST_IP
+    dst_guest_ip=dst_serial.serial_login()
+    external_host_ip = dst_host_ip
     dst_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=DST_GUEST_IP)
+                                     ip=dst_guest_ip)
     cmd_ping = 'ping %s -c 10' % external_host_ip
     output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
     if re.findall(r'100% packet loss', output):
         dst_guest_session.test_error('Ping failed')
-    test.sub_step_log('check dmesg info')
-    cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        dst_guest_session.test_error('Guest hit call trace')
 
     test.sub_step_log('quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
