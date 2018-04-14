@@ -46,13 +46,9 @@ def run_case(params):
 
     test.main_step_log('4. Verify the core has been hot-plugged to the guest')
     test.sub_step_log('4.1 Check cpu info inside guest')
-    src_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=src_guest_ip)
     cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
-    output = src_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'4', output):
-        test.test_print('The guest cpus info checked inside guest is right')
-    else:
+    output = src_serial.serial_cmd_output(cmd=cmd)
+    if not re.findall(r'4', output):
         test.test_error('The guest cpus info checked inside guest is wrong')
 
     test.sub_step_log('4.2 Check cpu info in src host')
@@ -111,12 +107,10 @@ def run_case(params):
     output = dst_serial.serial_cmd_output(cmd='reboot')
     if re.findall(r'Call trace', output):
         dst_serial.test_error('Guest hit Call trace during reboot')
-    dst_guest_ip = dst_serial.serial_login()
+    dst_serial.serial_login()
 
-    dst_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=dst_guest_ip)
     cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
+    output = dst_serial.serial_cmd_output(cmd=cmd)
     if re.findall(r'4', output):
         test.test_print('After reboot, the guest cpus info is right')
     else:
