@@ -71,7 +71,24 @@ def run_case(params):
 
     dst_guest_session = GuestSession(case_id=id, params=params,ip=dst_guest_ip)
     test.sub_step_log('5.1 Guest mouse and keyboard')
-    test.sub_step_log('5.2. Ping external host / copy file '
+    test.sub_step_log('5.2 DD a file inside guest')
+    cmd_dd = 'dd if=/dev/zero of=file1 bs=1M count=100 oflag=direct'
+    output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
+    if not output or re.findall('error', output):
+        dst_serial.test_error('Failed to dd a file inside guest')
+
+    test.sub_step_log('check dmesg info')
+    cmd = 'dmesg'
+    output = dst_guest_session.guest_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output) or not output:
+        dst_guest_session.test_error('Guest hit call trace')
+
+    test.main_step_log('5.3 Reboot guest')
+    dst_guest_session.guest_cmd_output(cmd='reboot')
+    dst_guest_ip = dst_serial.serial_login()
+    dst_guest_session = GuestSession(case_id=id, params=params,ip=dst_guest_ip)
+
+    test.sub_step_log('5.4. Ping external host / copy file '
                       'between guest and host')
     external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
@@ -79,16 +96,7 @@ def run_case(params):
     if re.findall(r'100% packet loss', output):
         dst_serial.test_error('Ping failed')
 
-    test.sub_step_log('5.3 dd a file inside guest')
-    cmd_dd = 'dd if=/dev/zero of=file1 bs=1M count=100 oflag=direct'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
-    if not output or re.findall('error', output):
-        dst_serial.test_error('Failed to dd a file inside guest')
-
-    test.sub_step_log('5.4. Reboot and then shutdown guest')
-    dst_guest_session.guest_cmd_output(cmd='reboot')
-    dst_serial.serial_login()
-
+    test.sub_step_log('5.5 Shutdown guest')
     output = dst_serial.serial_cmd_output('shutdown -h now')
     if re.findall(r'Call trace', output):
         dst_serial.test_error('Guest hit Call trace during shutdown')

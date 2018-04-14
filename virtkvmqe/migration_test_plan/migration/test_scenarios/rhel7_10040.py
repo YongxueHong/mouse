@@ -32,8 +32,8 @@ def create_disk(host_session, disk_dir, disk_name, disk_format, disk_size):
                                     % (disk_name, disk_format))
 
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = params.get('dst_host_ip')
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = params.get('dst_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
@@ -68,11 +68,11 @@ def run_case(params):
                                      'scsi-id=0,lun=1')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('1.3 Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
 
     test.main_step_log('2. In HMP, hot remove the block data disk '
                        'and scsi data disk.')
@@ -105,9 +105,9 @@ def run_case(params):
     params.vm_base_cmd_add('incoming', incoming_val)
 
     dst_qemu_cmd = params.create_qemu_cmd()
-    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=DST_HOST_IP,
+    src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"query-block"}',
                                            recv_timeout=10)
     if re.findall('virtio-blk0', output) or re.findall('r4', output):
@@ -115,17 +115,21 @@ def run_case(params):
 
     test.main_step_log('4. Start live migration from src host')
     flag = do_migration(remote_qmp=src_remote_qmp,
-                        migrate_port=incoming_port, dst_ip=DST_HOST_IP)
+                        migrate_port=incoming_port, dst_ip=dst_host_ip)
     if (flag == False):
         test.test_error('Migration timeout')
 
     test.main_step_log('5. Check guest status. Reboot guest ,  guest has '
                        '1 system disk and keeps working well.')
-    dst_serial = RemoteSerialMonitor(id, params, DST_HOST_IP, serial_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output):
+       test.test_error('Guest hit call trace')
 
     test.sub_step_log('5.1 Reboot dst guest')
     dst_serial.serial_cmd(cmd='reboot')
-    DEST_GUEST_IP = dst_serial.serial_login()
+    dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('5.2 Check if guest only has 1 system disk')
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"query-block"}',
@@ -133,7 +137,7 @@ def run_case(params):
     if re.findall('drive-virtio-blk0', output) or re.findall('r4', output):
         dst_remote_qmp.test_error('Destination guest has other disk '
                                   'except 1 system disk')
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=DEST_GUEST_IP)
+    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     output = dst_guest_session.guest_cmd_output(cmd='fdisk -l', timeout=60)
     if re.findall(r'/dev/sda', output):
         dst_guest_session.test_print('The system disk is in disk')

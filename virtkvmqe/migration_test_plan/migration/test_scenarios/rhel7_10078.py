@@ -7,8 +7,8 @@ from vm import CreateTest
 from utils_migration import do_migration, change_balloon_val
 
 def run_case(params):
-    SRC_HOST_IP = params.get('src_host_ip')
-    DST_HOST_IP = params.get('dst_host_ip')
+    src_host_ip = params.get('src_host_ip')
+    dst_host_ip = params.get('dst_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
@@ -22,11 +22,11 @@ def run_case(params):
                            'virtio-balloon-pci,id=balloon0,bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     test.sub_step_log('1.1 Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
-    SRC_GUEST_IP = src_serial.serial_login()
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    src_guest_ip = src_serial.serial_login()
 
     test.main_step_log('2 Check if memory balloon device works.')
     test.sub_step_log('2.1 Check if balloon device exists')
@@ -57,8 +57,8 @@ def run_case(params):
     params.vm_base_cmd_add('incoming', incoming_val)
     dst_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd,
-                                       ip=DST_HOST_IP, vm_alias='dst')
-    dst_remote_qmp = RemoteQMPMonitor(id, params, DST_HOST_IP, qmp_port)
+                                       ip=dst_host_ip, vm_alias='dst')
+    dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"query-balloon"}',
                                            recv_timeout=5)
     if re.findall(r'No balloon', output):
@@ -66,16 +66,20 @@ def run_case(params):
 
     test.main_step_log('5. Start live migration, should finish successfully')
     flag = do_migration(remote_qmp=src_remote_qmp,
-                        migrate_port=incoming_port, dst_ip=DST_HOST_IP)
+                        migrate_port=incoming_port, dst_ip=dst_host_ip)
     if (flag == False):
         test.test_error('Migration timeout')
 
     test.main_step_log('6. Check guest on des, guest should work well.')
-    dst_serial = RemoteSerialMonitor(id, params, DST_HOST_IP, serial_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd)
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
     test.sub_step_log('Reboot dst guest and get ip of destination guest')
     dst_serial.serial_cmd(cmd='reboot')
-    DEST_GUEST_IP = dst_serial.serial_login()
-    test.test_print('The ip of destination guest is %s' % DEST_GUEST_IP)
+    dst_guest_ip = dst_serial.serial_login()
+    test.test_print('The ip of destination guest is %s' % dst_guest_ip)
 
     test.main_step_log('7. Hot plug a memory balloon device to '
                        'destination guest.')
@@ -101,7 +105,7 @@ def run_case(params):
                                      'bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
-    src_remote_qmp = RemoteQMPMonitor(id, params, SRC_HOST_IP, qmp_port)
+    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
     output = eval(src_remote_qmp.qmp_cmd_output('{"execute":"query-balloon"}'))
     balloon_val_1 = output.get('return').get('actual')
 
@@ -109,20 +113,24 @@ def run_case(params):
                        'then do migration')
     change_balloon_val(new_value=balloon_val_1, remote_qmp=dst_remote_qmp)
     flag = do_migration(remote_qmp=dst_remote_qmp,
-                        migrate_port=incoming_port, dst_ip=SRC_HOST_IP)
+                        migrate_port=incoming_port, dst_ip=src_host_ip)
     if (flag == False):
         test.test_error('Migration timeout')
 
     test.main_step_log('11&12. Check guest on src, reboot, '
                        'ping external host,and shutdown.')
     test.sub_step_log('11.1 Reboot src guest')
-    src_serial = RemoteSerialMonitor(id, params, SRC_HOST_IP, serial_port)
+    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    cmd = 'dmesg'
+    output = src_serial.serial_cmd_output(cmd)
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
     src_serial.serial_cmd(cmd='reboot')
-    SRC_GUEST_IP = src_serial.serial_login()
+    src_guest_ip = src_serial.serial_login()
 
     test.sub_step_log('11.2 Ping external host and shutdown guest')
     src_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=SRC_GUEST_IP)
+                                     ip=src_guest_ip)
     external_host_ip = 'www.redhat.com'
     cmd_ping = 'ping %s -c 10' % external_host_ip
     output = src_guest_session.guest_cmd_output(cmd=cmd_ping)
