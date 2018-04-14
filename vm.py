@@ -277,16 +277,14 @@ class CreateTest(Test, TestCmd):
     def kill_guest_process(self, pid):
             cmd = 'kill -9 %s' % pid
             TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
-            # Just workaround with time.sleep(),
-            # need to update the function subprocess_cmd_base.
-            time.sleep(2)
+            # Check pid until killed completely.
+            self.check_guest_process()
 
     def kill_dst_guest_process(self, pid):
             cmd = 'ssh root@%s kill -9 %s' %(self.dst_ip, pid)
             TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
-            # Just workaround with time.sleep(),
-            # need to update the function subprocess_cmd_base.
-            time.sleep(2)
+            # Check pid until killed completely.
+            self.check_guest_process()
 
     def clear_env(self):
         pid_list = []
