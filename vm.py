@@ -260,9 +260,8 @@ class CreateTest(Test, TestCmd):
             else:
                 info = 'No found %s dst guest process' % self.guest_name
                 TestCmd.test_print(self, info)
-            time.sleep(3)
-
-        src_cmd_check = 'ps -axu | grep %s | grep -v grep' % self.guest_name
+            #time.sleep(3)
+        src_cmd_check = "ps -axu| grep %s | grep -vE 'grep|ssh'" % self.guest_name
         output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
                                                 verbose=False, cmd=src_cmd_check)
         if output:
@@ -277,12 +276,14 @@ class CreateTest(Test, TestCmd):
     def kill_guest_process(self, pid):
             cmd = 'kill -9 %s' % pid
             TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
+            time.sleep(1.5)
             # Check pid until killed completely.
             self.check_guest_process()
 
     def kill_dst_guest_process(self, pid):
             cmd = 'ssh root@%s kill -9 %s' %(self.dst_ip, pid)
             TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
+            time.sleep(1.5)
             # Check pid until killed completely.
             self.check_guest_process()
 
