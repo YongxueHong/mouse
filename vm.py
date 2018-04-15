@@ -170,7 +170,7 @@ class TestCmd(Test):
             return fd, pid
 
     def reader_select(self, name, stream, outbuf, vm_alias=None):
-        timeout = 1
+        timeout = 0.1
         while bool(select.select([stream], [], [], timeout)[0]):
             s = stream.readline()
             if not s:
@@ -183,6 +183,26 @@ class TestCmd(Test):
                 Test.test_print(self, '%s: %s' % (name, s))
         stream.close()
 
+    def check_status_qemu_boot(self, sub, vm_alias):
+        while 1:
+            qemu_stdout = sub.stdout.readline()
+            qemu_stdout = qemu_stdout.decode('utf-8').rstrip()
+            if qemu_stdout:
+                if vm_alias:
+                    Test.test_print(self, 'stdout->%s: %s' % (vm_alias, qemu_stdout))
+                else:
+                    Test.test_print(self, 'stdout: %s' % qemu_stdout)
+                break
+
+            qemu_stderr = sub.stderr.readline()
+            qemu_stderr = qemu_stderr.decode('utf-8').rstrip()
+            if qemu_stderr:
+                if vm_alias:
+                    Test.test_print(self, 'stderr->%s: %s' % (vm_alias, qemu_stderr))
+                else:
+                    Test.test_print(self, 'stderr: %s' % qemu_stderr)
+                break
+
     def subprocess_cmd_advanced(self, cmd, echo_cmd=True, vm_alias=None):
         pid = ''
         stdout = []
@@ -191,6 +211,9 @@ class TestCmd(Test):
             Test.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        self.check_status_qemu_boot(sub, vm_alias)
+
         t1 = threading.Thread(target=self.reader_select,
                               args=('stdout', sub.stdout, stdout, vm_alias))
         t2 = threading.Thread(target=self.reader_select,
@@ -260,7 +283,7 @@ class CreateTest(Test, TestCmd):
             else:
                 info = 'No found %s dst guest process' % self.guest_name
                 TestCmd.test_print(self, info)
-            time.sleep(3)
+            #time.sleep(3)
 
         src_cmd_check = 'ps -axu | grep %s | grep -v grep' % self.guest_name
         output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
