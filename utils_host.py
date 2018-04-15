@@ -191,7 +191,6 @@ class HostSession(TestCmd):
             TestCmd.subprocess_cmd_advanced(self, cmd=cmd, vm_alias=vm_alias)
         else:
             TestCmd.subprocess_cmd_advanced(self, cmd=cmd)
-        time.sleep(3)
         pid = self.get_guest_pid(cmd)
         self.show_qemu_cmd()
 
@@ -201,7 +200,6 @@ class HostSession(TestCmd):
             TestCmd.subprocess_cmd_advanced(self, cmd=cmd, vm_alias=vm_alias)
         else:
             TestCmd.subprocess_cmd_advanced(self, cmd=cmd)
-        time.sleep(3)
         dst_pid = self.get_guest_pid(cmd, dst_ip=ip)
         self.show_qemu_cmd()
 
