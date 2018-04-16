@@ -107,7 +107,7 @@ def run_case(params):
 
     test.main_step_log('7. Check if guest works well.')
     test.sub_step_log('7.1 Guest mouse and keyboard.')
-    test.sub_step_log('7.2Check dmesg info ')
+    test.sub_step_log('7.2 Check dmesg info ')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
     cmd = 'dmesg'
@@ -120,11 +120,8 @@ def run_case(params):
     dst_guest_ip=dst_serial.serial_login()
     guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
     test.sub_step_log(' Can access guest from external host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    output = guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        guest_session.test_error('Ping failed')
+
+    guest_session.guest_ping_test('wwww.redhat.com', 10)
 
     test.sub_step_log('quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
@@ -132,7 +129,5 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
