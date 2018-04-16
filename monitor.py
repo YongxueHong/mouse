@@ -142,10 +142,12 @@ class RemoteSerialMonitor(RemoteMonitor):
     def prompt_password(self, output, recv_timeout=1,
                         max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
                         sub_timeout=10):
+        allput = ''
         end_time = time.time() + sub_timeout
         real_logined = False
         while time.time() < float(end_time):
-            if re.findall(r'Password:', output):
+            allput = allput + output
+            if re.findall(r'Password:', allput):
                 real_logined = True
                 break
             output = RemoteMonitor.rec_data(self,
@@ -161,22 +163,25 @@ class RemoteSerialMonitor(RemoteMonitor):
     def prompt_shell(self, output, recv_timeout=1,
                      max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
                      sub_timeout=10):
+        allput = ''
         end_time = time.time() + sub_timeout
         real_logined = False
         sub_real_logined = False
         while time.time() < float(end_time):
-            if re.findall(r'Last login:', output):
-                if  re.findall(r']#', output):
+            allput = allput + output
+            if re.findall(r'Last login:', allput):
+                if  re.findall(r']#', allput):
                     real_logined = True
                     break
                 else:
                     while time.time() < float(end_time):
+                        allput = allput + output
                         output = RemoteMonitor.rec_data(self,
                                                         recv_timeout=recv_timeout,
                                                         max_recv_data=max_recv_data, )
                         RemoteMonitor.test_print(self, info=output,
                                                  serial_debug=True)
-                        if re.findall(r']#', output):
+                        if re.findall(r']#', allput):
                             sub_real_logined = True
                             break
                     err_info = 'No prompt \"[root@xxxx ~]# \" ' \
@@ -202,17 +207,19 @@ class RemoteSerialMonitor(RemoteMonitor):
                      max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
                      ip_timeout=1, timeout=300):
         output = ''
+        allput = ''
         end_time = time.time() + timeout
         while time.time() < end_time:
             output = RemoteMonitor.rec_data(self,
                                             recv_timeout=recv_timeout,
                                             max_recv_data=max_recv_data)
             RemoteMonitor.test_print(self, info=output, serial_debug=True)
-            if re.findall(r'Call Trace:', output):
+            allput = allput + output
+            if re.findall(r'Call Trace:', allput):
                 RemoteQMPMonitor.test_error(self, 'Guest hit call trace')
-            if re.search(r"login:", output):
+            if re.search(r"login:", allput):
                 break
-        if not output and not re.search(r"login:", output):
+        if not output and not re.search(r"login:", allput):
             err_info = 'No prompt \"ligin:\" under %s sec' % timeout
             RemoteMonitor.test_error(self, err_info)
 
@@ -311,7 +318,7 @@ class RemoteSerialMonitor(RemoteMonitor):
         downed = False
         end_time = time.time() + timeout
         while time.time() < float(end_time):
-            output = self.serial_output()
+            output = output + self.serial_output()
             if re.findall(r'Power down', output):
                 downed = True
                 break
