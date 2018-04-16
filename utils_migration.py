@@ -9,7 +9,7 @@ def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
     remote_qmp.sub_step_log('Check the status of migration')
     return query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout)
 
-def query_migration(remote_qmp, chk_timeout=1200):
+def query_migration(remote_qmp, interval=3, chk_timeout=1200):
     cmd = '{"execute":"query-migrate"}'
     end_time = time.time() + chk_timeout
     while time.time() < end_time:
@@ -18,10 +18,12 @@ def query_migration(remote_qmp, chk_timeout=1200):
             return True
         elif re.findall(r'"status": "failed"', output):
             remote_qmp.test_error('migration failed')
+        time.sleep(interval)
     return False
 
 def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
-                        dst_remote_qmp, times=10, query_thread=None):
+                        dst_remote_qmp, times=10, query_thread=None,
+                        chk_timeout=300):
     src_ip = params.get('src_host_ip')
     dst_ip = params.get('dst_host_ip')
     migrate_port = params.get('incoming_port')
@@ -67,15 +69,23 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
             src_host_session.sub_step_log('%d: Do migration from dst to src' % i)
             src_remote_qmp.qmp_cmd_output(cmd='{"execute":"quit"}',
                                           echo_cmd=False)
-            src_chk_cmd = "ps -aux | grep %s | grep -vE 'grep|ssh'" \
-                          % guest_name
-            output = src_host_session.host_cmd_output(cmd=src_chk_cmd,
-                                                      echo_cmd=False,
-                                                      verbose=False)
-            if output:
-                src_pid = re.split(r"\s+", output)[1]
-                src_host_session.host_cmd_output('kill -9 %s' % src_pid,
-                                                 echo_cmd=False)
+            flag = False
+            end_time = time.time() + chk_timeout
+            while (time.time() < end_time):
+                src_chk_cmd = "ps -aux | grep %s | grep -vE 'grep|ssh'"\
+                              % guest_name
+                output = src_host_session.host_cmd_output(cmd=src_chk_cmd,
+                                                          echo_cmd=True,
+                                                          verbose=False)
+                if output:
+                    src_pid = re.split(r"\s+", output)[1]
+                    src_host_session.host_cmd_output('kill -9 %s' % src_pid,
+                                                     echo_cmd=True)
+                else:
+                    flag = True
+                    break
+            if (flag == False):
+                src_host_session.test_error('Failed to quit src qemu')
 
             src_host_session.sub_step_log('start src with -incoming')
             opt_value = 'tcp:0:%s' % migrate_port
@@ -102,16 +112,24 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
             src_host_session.sub_step_log('%d: Do migration from src to dst ' % i)
             dst_remote_qmp.qmp_cmd_output(cmd='{"execute":"quit"}',
                                           echo_cmd=False)
-            dst_chk_cmd = 'ssh root@%s ps -aux | grep %s | grep -v grep' \
-                          % (dst_ip, guest_name)
-            output = src_host_session.host_cmd_output(cmd=dst_chk_cmd,
-                                                      echo_cmd=False,
-                                                      verbose=False)
-            if output:
-                dst_pid = re.split(r"\s+", output)[1]
-                src_host_session.host_cmd_output('ssh root@%s kill -9 %s'
-                                                 % (dst_ip, dst_pid),
-                                                 echo_cmd=False)
+            flag = False
+            end_time = time.time() + chk_timeout
+            while (time.time() < end_time):
+                dst_chk_cmd = 'ssh root@%s ps -aux | grep %s | grep -v grep' \
+                              % (dst_ip, guest_name)
+                output = src_host_session.host_cmd_output(cmd=dst_chk_cmd,
+                                                          echo_cmd=True,
+                                                          verbose=False)
+                if output:
+                    dst_pid = re.split(r"\s+", output)[1]
+                    src_host_session.host_cmd_output('ssh root@%s kill -9 %s'
+                                                     % (dst_ip, dst_pid),
+                                                     echo_cmd=True)
+                else:
+                    flag = True
+                    break
+            if (flag == False):
+                src_host_session.test_error('Failed to quit dst qemu')
 
             src_host_session.sub_step_log('start dst with -incoming ')
             opt_value = 'tcp:0:%s' % migrate_port
