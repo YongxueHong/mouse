@@ -52,6 +52,7 @@ class RemoteMonitor(Test):
                  max_recv_data=MAX_RECEIVE_DATA, search_str=None):
         s = ''
         data = ''
+        alldata = ''
         while self.data_availabl(timeout=recv_timeout):
             try:
                 data = self._socket.recv(max_recv_data)
@@ -60,8 +61,9 @@ class RemoteMonitor(Test):
                                 % (self._ip, self._port))
             if not data:
                 break
+            alldata = alldata + data
             if search_str:
-                if re.findall(search_str, data):
+                if re.findall(search_str, alldata):
                     info = '===> Found the searched keyword \"%s\" on serial. ' \
                            % search_str
                     s += data + '\n' + info
