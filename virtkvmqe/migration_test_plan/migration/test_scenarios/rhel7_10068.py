@@ -1,3 +1,4 @@
+import time
 from utils_host import HostSession
 from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
@@ -13,6 +14,8 @@ def run_case(params):
     incoming_port = params.get('incoming_port')
     test = CreateTest(case_id='rhel7_10068', params=params)
     id = test.get_id()
+    guest_pwd = params.get('guest_passwd')
+    login_timeout = 1200
 
     test.main_step_log('1.Start VM in src host')
     params.vm_base_cmd_add('S', 'None')
@@ -34,6 +37,8 @@ def run_case(params):
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip, 
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
+    dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
+                                     port=serial_port)
 
     test.main_step_log('3. Start live migration with '
                        'running below script on src host')
@@ -51,15 +56,26 @@ def run_case(params):
             dst_remote_qmp.test_error('migration status error')
 
     test.main_step_log('5.Reboot guest, guest should work well.')
-    dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
-                                     port=serial_port)
+    end_time = time.time() + login_timeout
+    flag = False
+    while time.time() < end_time:
+        usr_output =  dst_serial.serial_cmd_output('root')
+        if re.findall(r'Password:', usr_output):
+            output = dst_serial.serial_cmd_output(guest_pwd)
+            if re.findall(r'Last login:', output):
+                dst_guest_ip = dst_serial.serial_get_ip()
+                flag = True
+                break
+    if (flag == False):
+        test.test_error('Destination login timeout')
+
     cmd = 'dmesg'
     output = dst_serial.serial_cmd_output(cmd)
     if re.findall(r'Call Trace:', output):
         test.test_error('Guest hit call trace')
     dst_serial.serial_cmd(cmd='reboot')
     dst_guest_ip=dst_serial.serial_login()
-    external_host_ip = dst_host_ip
+    external_host_ip = 'www.redhat.com'
     dst_guest_session = GuestSession(case_id=id, params=params,
                                      ip=dst_guest_ip)
     cmd_ping = 'ping %s -c 10' % external_host_ip
