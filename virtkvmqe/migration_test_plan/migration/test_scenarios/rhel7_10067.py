@@ -109,23 +109,18 @@ def run_case(params):
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('5.2 Ping external host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        dst_guest_session.test_error('Ping failed')
+    dst_guest_session = GuestSession(case_id=id, params=params,
+                                     ip=dst_guest_ip)
+    dst_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('5.3 DD a file inside guest')
-    cmd_dd = 'dd if=/dev/zero of=file1 bs=100M count=10 oflag=direct'
+    cmd_dd = 'dd if=/dev/zero of=file1 bs=1M count=100 oflag=direct'
     output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
     if not output or re.findall('error', output):
         test.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('5.4 Shutdown guest successfully')
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
