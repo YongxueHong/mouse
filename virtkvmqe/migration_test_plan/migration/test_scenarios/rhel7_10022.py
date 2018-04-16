@@ -89,11 +89,7 @@ def run_case(params):
     test.main_step_log('4. Check if guest works well.')
     test.sub_step_log('4.1 Guest mouse and keyboard.')
     test.sub_step_log('4.2. Ping external host / copy file between guest and host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    output = guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        guest_session.test_error('Ping failed')
+    guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('4.3 dd a file inside guest.')
     cmd_dd = 'dd if=/dev/zero of=/tmp/dd.io bs=512b count=2000 oflag=direct'
@@ -108,10 +104,4 @@ def run_case(params):
     test.sub_step_log('4.4. Reboot and then shutdown guest.')
     dst_serial.serial_cmd(cmd='reboot')
     dst_serial.serial_login()
-    output = dst_serial.serial_cmd_output(cmd='shutdown -h now', recv_timeout=3)
-    if re.findall(r'Call Trace:', output):
-        dst_serial.test_error('Guest hit call trace')
-
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
-    if output:
-        src_remote_qmp.test_error('Failed to quit qemu on src end')
+    dst_serial.serial_shutdown_vm(recv_timeout=1)
