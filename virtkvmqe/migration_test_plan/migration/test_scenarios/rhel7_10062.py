@@ -117,9 +117,7 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
@@ -228,9 +226,7 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
     if output:
@@ -338,9 +334,7 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
     
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
@@ -448,7 +442,5 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
