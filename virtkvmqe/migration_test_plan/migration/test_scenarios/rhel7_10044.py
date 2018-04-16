@@ -128,17 +128,12 @@ def run_case(params):
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('6.2 Ping external host')
-    external_host_ip = dst_host_ip
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        dst_guest_session.test_error('Ping failed')
+    dst_guest_session = GuestSession(case_id=id, params=params,
+                                     ip=dst_guest_ip)
+    dst_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('6.3 Shutdown guest successfully')
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
