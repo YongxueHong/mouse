@@ -13,7 +13,7 @@ def run_case(params):
     incoming_port = params.get('incoming_port')
     test = CreateTest(case_id='rhel7_10047', params=params)
     id = test.get_id()
-    guest_name = test.guest_name
+    guest_arch = params.get('guest_arch')
     src_host_session = HostSession(id, params)
     mem_size_base = params.get('mem_size')
 
@@ -22,12 +22,37 @@ def run_case(params):
                        'M=host physical memory number)')
     mem_cmd = "free -h | grep Mem | awk '{print $2}' |sed 's/G//g'"
     mem_cmd_remote = "ssh root@%s %s" % (dst_host_ip, mem_cmd)
-    cpu_cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
+    if (guest_arch == 'ppc64le'):
+        cpu_cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
+    elif(guest_arch == 'x86_64'):
+        # Just a workaround it with cpu_src.strip(':')[-1]
+        # and shell command "lscpu | sed -n '4p'"
+        # since no any output with
+        # host_cmd_output(lscpu | sed -n '4p' | awk '{print $2}').
+        cpu_cmd = "lscpu | sed -n '4p'"
     cpu_cmd_remote = "ssh root@%s %s" % (dst_host_ip, cpu_cmd)
-    mem_src = int(src_host_session.host_cmd_output(cmd=mem_cmd))
-    mem_dst = int(src_host_session.host_cmd_output(cmd=mem_cmd_remote))
-    cpu_src = int(src_host_session.host_cmd_output(cmd=cpu_cmd))
-    cpu_dst = int(src_host_session.host_cmd_output(cmd=cpu_cmd_remote))
+
+    mem_src = src_host_session.host_cmd_output(cmd=mem_cmd)
+    mem_dst = src_host_session.host_cmd_output(cmd=mem_cmd_remote)
+    cpu_src = src_host_session.host_cmd_output(cmd=cpu_cmd)
+    cpu_dst = src_host_session.host_cmd_output(cmd=cpu_cmd_remote)
+
+    if "." in mem_src:
+        mem_src = int(float(mem_src))
+    else:
+        mem_src = int(mem_src)
+
+    if "." in mem_dst:
+        mem_dst = int(float(mem_dst))
+    else:
+        mem_dst = int(mem_dst)
+
+    cpu_src = cpu_src.strip(':')[-1]
+    cpu_dst = cpu_dst.strip(':')[-1]
+
+    cpu_src = int(cpu_src)
+    cpu_dst = int(cpu_dst)
+
     mem_guest = str(min(mem_src, mem_dst))
     cpu_guest = str(min(cpu_src, cpu_dst))
 
@@ -75,15 +100,13 @@ def run_case(params):
         dst_serial.test_error('Ping failed')
 
     test.sub_step_log('4.4 DD a file inside guest')
-    cmd_dd = 'dd if=/dev/zero of=file1 bs=100M count=10 oflag=direct'
+    cmd_dd = 'dd if=/dev/zero of=file1 bs=1M count=100 oflag=direct'
     output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
     if not output or re.findall('error', output):
         dst_serial.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('4.5 Shutdown guest')
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
