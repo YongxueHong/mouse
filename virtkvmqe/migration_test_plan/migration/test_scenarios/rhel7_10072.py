@@ -310,9 +310,7 @@ def run_case(params):
     test.sub_step_log('4.4 Guest can reboot and shutdown successfully.')
     dst_serial.serial_cmd(cmd='reboot')
     dst_serial.serial_login()
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)

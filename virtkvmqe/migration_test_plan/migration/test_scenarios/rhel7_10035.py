@@ -132,9 +132,7 @@ def run_case(params):
         test.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('7.3 Shutdown guest')
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
     if output:
