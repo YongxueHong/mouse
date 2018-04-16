@@ -13,7 +13,7 @@ def run_case(params):
     incoming_port = params.get('incoming_port')
     test = CreateTest(case_id='rhel7_10047', params=params)
     id = test.get_id()
-    guest_name = test.guest_name
+    guest_arch = params.get('guest_arch')
     src_host_session = HostSession(id, params)
     mem_size_base = params.get('mem_size')
 
@@ -22,12 +22,22 @@ def run_case(params):
                        'M=host physical memory number)')
     mem_cmd = "free -h | grep Mem | awk '{print $2}' |sed 's/G//g'"
     mem_cmd_remote = "ssh root@%s %s" % (dst_host_ip, mem_cmd)
-    cpu_cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
+    if (guest_arch == 'ppc64le'):
+        cpu_cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
+    elif(guest_arch == 'x86_64'):
+        cpu_cmd = "lscpu | sed -n '4p' | awk '{print $2}'"
     cpu_cmd_remote = "ssh root@%s %s" % (dst_host_ip, cpu_cmd)
-    mem_src = int(src_host_session.host_cmd_output(cmd=mem_cmd))
-    mem_dst = int(src_host_session.host_cmd_output(cmd=mem_cmd_remote))
-    cpu_src = int(src_host_session.host_cmd_output(cmd=cpu_cmd))
-    cpu_dst = int(src_host_session.host_cmd_output(cmd=cpu_cmd_remote))
+
+    mem_src = src_host_session.host_cmd_output(cmd=mem_cmd)
+    mem_dst = src_host_session.host_cmd_output(cmd=mem_cmd_remote)
+    cpu_src = src_host_session.host_cmd_output(cmd=cpu_cmd)
+    cpu_dst = src_host_session.host_cmd_output(cmd=cpu_cmd_remote)
+
+    mem_src = int(float(mem_src))
+    mem_dst = int(float(mem_dst))
+    cpu_src = int(float(cpu_src))
+    cpu_dst = int(float(cpu_dst))
+
     mem_guest = str(min(mem_src, mem_dst))
     cpu_guest = str(min(cpu_src, cpu_dst))
 
