@@ -232,10 +232,12 @@ def run_case(params):
         if ret == True:
             dst_serial = RemoteSerialMonitor(case_id=id, params=params,
                                              ip=dst_host_ip, port=serial_port)
+            allput = ''
             while time.time() < install_timeout:
                 output = dst_serial.serial_output()
                 test.test_print(output)
-                if re.findall(r'Power down.', output):
+                allput = allput + output
+                if re.findall(r'Power down.', allput):
                    install_done = True
                    host_session.host_cmd_output('rm -rf %s/initrd.img' % isos_dir)
                    host_session.host_cmd_output('rm -rf %s/vmlinuz' % isos_dir)

@@ -254,10 +254,12 @@ def run_case(params):
     dst_remote_qmp.qmp_cmd_output('{ "execute": "cont" }')
     dst_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
 
+    allput = ''
     while time.time() < install_timeout:
         output = dst_serial.serial_output()
         test.test_print(output)
-        if re.findall(r'Power down.', output):
+        allput = allput + output
+        if re.findall(r'Power down.', allput):
            install_done = True
            host_session.host_cmd_output('rm -rf %s/initrd.img' % isos_dir)
            host_session.host_cmd_output('rm -rf %s/vmlinuz' % isos_dir)
