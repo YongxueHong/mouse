@@ -73,10 +73,12 @@ def run_case(params):
         output = src_remote_qmp.qmp_cmd_output(cmd=cmd)
         if re.findall('"status": "active"', output):
             break
+        if re.findall(r'"status": "failed"', output):
+            test.test_error('migration failed')
 
     test.main_step_log('4. During migration in progress, cancel migration')
     cmd = '{"execute":"migrate_cancel"}'
-    src_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=5)
+    src_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=3)
     output = src_remote_qmp.qmp_cmd_output('{"execute":"query-migrate"}')
     if re.findall(r'"status": "cancelled"', output):
         src_remote_qmp.test_print('Src cancel migration successfully')
@@ -112,7 +114,8 @@ def run_case(params):
                     '{"max-bandwidth": %s}}' % speed
         src_remote_qmp.qmp_cmd_output(cmd=speed_cmd)
         paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
-        output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd)
+        output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd,
+                                               recv_timeout=20)
         if re.findall(r'"downtime-limit": %s' % downtime, output) \
                 and re.findall(r'"max-bandwidth": %s' % speed, output):
             test.test_print('Change downtime and speed successfully')
@@ -137,24 +140,14 @@ def run_case(params):
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('7.3 Ping external host/copy file between guest and host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
     dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        dst_guest_session.test_error('Ping failed')
+    dst_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('7.4 DD a file inside guest')
-    cmd_dd = 'dd if=/dev/zero of=file1 bs=100M count=10 oflag=direct'
+    cmd_dd = 'dd if=/dev/zero of=file1 bs=1M count=100 oflag=direct'
     output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
     if not output or re.findall('error', output):
         test.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('7.5 Shutdown guest successfully')
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
-
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
-    if output:
-        src_remote_qmp.test_error('Failed to quit qemu on src end')
+    dst_serial.serial_shutdown_vm()
