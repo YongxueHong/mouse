@@ -143,16 +143,10 @@ def run_case(params):
         dst_guest_session.test_print('The system disk is in disk')
 
     test.sub_step_log('5.3 Can access guest from external host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        dst_guest_session.test_error('Ping failed')
+    dst_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('5.4 quit qemu on src end and shutdown vm on dst end')
-    output = dst_serial.serial_cmd_output('shutdown -h now')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during shutdown')
+    dst_serial.serial_shutdown_vm()
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
     if output:
