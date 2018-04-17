@@ -28,6 +28,7 @@ class CaseRunner():
         self._run_result = {}
         self._run_result['error_cases'] = []
         self._run_result['pass_cases'] = []
+        self._run_result['case_time'] = {}
         self._run_result['total_time'] = 0
         self.get_case_list()
         self._run_result['TOTAL'] = len(self._case_list)
@@ -35,7 +36,9 @@ class CaseRunner():
     def timeout_log_file(self, case):
         log_file_list = []
         test_log_dir = os.path.join(self._params.get('log_dir'),
-                                    case + '_logs')
+                                    case + '-'
+                                    + self._params.get('sub_dir_timestamp')
+                                    +'_logs')
         log = test_log_dir + '/' + 'long_debug.log'
         log_file_list.append(log)
         log = test_log_dir + '/' + 'short_debug.log'
@@ -72,12 +75,15 @@ class CaseRunner():
                 break
 
     def get_case_list(self):
+        times = int(self._params.get('repeat_times'))
         if self._only_case_list:
-            for case in self._only_case_list:
-                self._case_list.append(case)
+            for i in range(times):
+                for case in self._only_case_list:
+                    self._case_list.append(case)
         else:
-            for k, v in self._params.get('test_cases').items():
-                self._case_list.append(k)
+            for i in range(times):
+                for k, v in self._params.get('test_cases').items():
+                    self._case_list.append(k)
 
     def display_sum_results(self):
         self._run_result['ERROR'] = len(self._run_result['error_cases'])
@@ -90,21 +96,20 @@ class CaseRunner():
         print ('==>PASS : %s ' % (self._run_result['PASS']))
         if self._run_result['PASS'] != 0:
             cnt = 1
-            for case in self._case_list:
-                if case not in self._run_result['error_cases']:
-                    self._run_result['pass_cases'].append(case)
             for pass_case in self._run_result['pass_cases']:
-                print '   %d: %s-%s' % (cnt, pass_case.upper().replace('_', '-'),
-                                        self._params.get('test_cases')
-                                        [pass_case]['name'])
+                print '   %d: %s-%s (%s)' \
+                      % (cnt, pass_case.upper().replace('_', '-'),
+                         self._params.get('test_cases')[pass_case]['name'],
+                         self._run_result['case_time'][str(pass_case)])
                 cnt = cnt + 1
         print ('==>ERROR : %s '  %(self._run_result['ERROR']))
         if self._run_result['ERROR'] != 0:
             cnt = 1
             for error_case in self._run_result['error_cases']:
-                print ('   %d: \033[91m%s\033[00m-%s'
+                print ('   %d: \033[91m%s\033[00m-%s (%s)'
                        % (cnt, error_case.upper().replace('_', '-'),
-                          self._params.get('test_cases')[error_case]['name']))
+                          self._params.get('test_cases')[error_case]['name'],
+                          self._run_result['case_time'][str(error_case)]))
                 cnt = cnt + 1
         print ('==>RUN TIME : %s min %s sec '
                % (int(self._run_time / 60),
@@ -142,6 +147,8 @@ class CaseRunner():
                    % (('=' * 25), self._requirement_id.upper().replace('_', '-'),
                       self._requirement_name, ('=' * 25),))
         for case in self._case_list:
+            timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
+            self._params.get('sub_dir_timestamp', timestamp)
             if self._params.get('verbose') == 'no':
                 info = '--> Running case(%s/%s): %s-%s ' \
                        % (cont, self._run_result['TOTAL'],
@@ -161,14 +168,22 @@ class CaseRunner():
 
             self._sub_end_time = time.time()
             self._sub_run_time = self._sub_end_time - self._sub_start_time
-
+            self._case_time = "%s min %s sec" % (int(self._sub_run_time / 60),
+                                           int(self._sub_run_time -
+                                               int(self._sub_run_time / 60) * 60))
             if float(self._sub_run_time) > float(int(self._params.get('timeout'))):
                 sub_proc.terminate()
                 self._run_result['error_cases'].append(case)
+                self._run_result['case_time'][case] = self._case_time
                 self.timeout_log_file(case)
 
             if not case_queue.empty():
                 self._run_result['error_cases'].append(case_queue.get())
+                self._run_result['case_time'][case] = self._case_time
+            else:
+                self._run_result['pass_cases'].append(case)
+                self._run_result['case_time'][case] = self._case_time
+
             if self._params.get('verbose') == 'no':
                 sys.stdout.write('\b')
                 if case in self._run_result['error_cases']:

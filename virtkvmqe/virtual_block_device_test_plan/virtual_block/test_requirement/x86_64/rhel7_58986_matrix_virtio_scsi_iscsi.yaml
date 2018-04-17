@@ -97,8 +97,14 @@ vm_cmd_base:
 # Set the test case info linked to this test requirement.
 test_cases:
 
+# Set repeat times.
+repeat_times: '1'
+
+# Enable/Disable debug mode.
 verbose: 'no'
+
 # Set the time out for each test case.
 timeout: '3600'
+
 
 

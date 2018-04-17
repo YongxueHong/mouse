@@ -146,8 +146,14 @@ test_cases:
  rhel7_59369:
   name: "[migration] Migrate guest after hotpluging vcpu - ppc only"
 
+# Set repeat times.
+repeat_times: '1'
+
+# Enable/Disable debug mode.
 verbose: 'no'
 
+# Set the time out for each test case.
 timeout: '3600'
+
 
 

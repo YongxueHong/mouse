@@ -17,9 +17,12 @@ class Test():
     def log_echo_file(self, log_str, short_debug=True, serial_debug=False):
         prefix_file = self.case_id
         log_file_list = []
+        dir_timestamp = self.params.get('sub_dir_timestamp')
         if not prefix_file:
             prefix_file = 'Untitled'
-        sub_log_dir = os.path.join(self.params.get('log_dir'), self.case_id + '_logs')
+        sub_log_dir = os.path.join(self.params.get('log_dir'),
+                                   self.case_id + '-'
+                                   + dir_timestamp + '_logs')
 
         if not os.path.exists(sub_log_dir):
             os.mkdir(sub_log_dir)
