@@ -127,6 +127,8 @@ test_cases:
   name: "[migration] Ping-pong migration during file transfer"
  rhel7_10061:
   name: "[migration] Cancel a migration process with \"migration_cancel\" command"
+ rhel7_10062:
+  name: "[migration] Migrate guest while vhost closes"
  rhel7_10064:
   name: "[migration] Migrate guest after VM paused"
  rhel7_10067:
