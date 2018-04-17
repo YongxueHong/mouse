@@ -59,9 +59,9 @@ def run_case(params):
     end_time = time.time() + login_timeout
     flag = False
     while time.time() < end_time:
-        usr_output =  dst_serial.serial_cmd_output('root')
+        usr_output =  dst_serial.serial_cmd_output('root', recv_timeout=3)
         if re.findall(r'Password:', usr_output):
-            output = dst_serial.serial_cmd_output(guest_pwd)
+            output = dst_serial.serial_cmd_output(guest_pwd,recv_timeout=3)
             if re.findall(r'Last login:', output):
                 dst_guest_ip = dst_serial.serial_get_ip()
                 flag = True
