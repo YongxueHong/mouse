@@ -68,18 +68,24 @@ def run_case(params):
     src_remote_qmp.qmp_cmd_output(cmd=cmd)
 
     test.sub_step_log('Check the status of migration')
+    flag_active = False
     cmd = '{"execute":"query-migrate"}'
-    while True:
+    end_time = time.time() + chk_time_1
+    while time.time() < end_time:
         output = src_remote_qmp.qmp_cmd_output(cmd=cmd)
         if re.findall('"status": "active"', output):
+            flag_active = True
             break
-        if re.findall(r'"status": "failed"', output):
-            test.test_error('migration failed')
+        elif re.findall(r'"status": "failed"', output):
+            src_remote_qmp.test_error('migration failed')
+    if (flag_active == False):
+        test.test_error('Migration is not active within %d' % chk_time_1)
 
     test.main_step_log('4. During migration in progress, cancel migration')
     cmd = '{"execute":"migrate_cancel"}'
     src_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=3)
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-migrate"}')
+    output = src_remote_qmp.qmp_cmd_output('{"execute":"query-migrate"}',
+                                           recv_timeout=3)
     if re.findall(r'"status": "cancelled"', output):
         src_remote_qmp.test_print('Src cancel migration successfully')
     else:
@@ -153,3 +159,4 @@ def run_case(params):
     test.sub_step_log('7.5 Shutdown guest successfully')
 
     dst_serial.serial_shutdown_vm()
+    
