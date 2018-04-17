@@ -13,6 +13,7 @@ def run_case(params):
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
+    paused_timeout = 60
 
     test = CreateTest(case_id='rhel7_10064', params=params)
     id = test.get_id()
@@ -82,11 +83,17 @@ def run_case(params):
     test.main_step_log('4. Stop guest on src guest before migration')
     cmd = '{"execute":"stop"}'
     src_remote_qmp.qmp_cmd_output(cmd)
-    while True:
-        output = src_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
+    flag_paused = False
+    end_time = time.time() + paused_timeout
+    while time.time() < end_time:
+        output = src_remote_qmp.qmp_cmd_output('{"execute":"query-status"}',
+                                               recv_timeout=3)
         if re.findall(r'"status": "paused"', output):
+            flag_paused = True
             break
-        time.sleep(5)
+    if (flag_paused == False):
+        test.test_error('Guest could not become to paused within %d'
+                        % paused_timeout)
 
     test.main_step_log('5. Start migration from src  to dst host')
     flag = do_migration(src_remote_qmp, incoming_port, dst_host_ip)
@@ -94,12 +101,17 @@ def run_case(params):
         test.test_error('migration timeout')
    
     test.main_step_log('6.After migration finished ,check guests status.')
-    cmd = '{"execute":"query-status"}'
-    while True:
-        output = dst_remote_qmp.qmp_cmd_output(cmd=cmd)
+    flag_paused = False
+    end_time = time.time() + paused_timeout
+    while time.time() < end_time:
+        output = dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
         if re.findall(r'"status": "paused"', output):
-           break
-        time.sleep(3)
+            flag_paused = True
+            break
+    if (flag_paused == False):
+        test.test_error('Guest is not paused on dst side '
+                        'after migration finished')
+
     dst_remote_qmp.qmp_cmd_output('{"execute":"cont"}')
     output=dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
     if not re.findall(r'"status": "running"', output):
