@@ -99,6 +99,11 @@ test_cases:
  rhel_114178_virtio_scsi_local:
   name: "[virtual block] blockdev backing file"
 
+# Set repeat times.
+repeat_times: '1'
+
+# Enable/Disable debug mode.
 verbose: 'no'
+
 # Set the time out for each test case.
 timeout: '3600'

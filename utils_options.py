@@ -14,6 +14,7 @@ options_list = [
     "test_requirement=",
     "test_cases=",
     "verbose=",
+    "repeat_times=",
     "src_host_ip=",
     "dst_host_ip=",
     "image_format=",
@@ -34,6 +35,8 @@ help_info = "Usage: \n" \
             "               Run specific cases. \n" \
             "--verbose=yes|no \n" \
             "               Display the log of running. \n" \
+            "--repeat_times=$times \n" \
+            "               Run given cases with $times. \n" \
             "Please see README for more information."
 
 class Options():
@@ -95,6 +98,8 @@ class Options():
                     opt_dict[opt] = val
                 elif opt == "--verbose":
                     opt_dict[opt] = val
+                elif opt == "--repeat_times":
+                    opt_dict[opt] = val
 
         except getopt.GetoptError:
             print("Please Check the command again.")
@@ -106,3 +111,5 @@ class Options():
         for k, v in self.options.items():
             if k == '--verbose':
                 params.get('verbose', v)
+            if k == '--repeat_times':
+                params.get('repeat_times', v)
