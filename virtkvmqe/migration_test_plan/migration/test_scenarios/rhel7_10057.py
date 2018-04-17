@@ -2,7 +2,6 @@ from __future__ import division
 from utils_host import HostSession
 from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
-from utils_migration import query_migration
 import re
 import os
 import time
@@ -24,9 +23,11 @@ def run_case(params):
     test = CreateTest(case_id='rhel7_10057', params=params)
     id = test.get_id()
     guest_passwd = params.get('guest_passwd')
-    downtime = str(30)
+    downtime = '30000'
     script = 'migration_dirtypage_1.c'
     query_timeout = 2400
+    active_timeout = 300
+    running_timeout = 300
 
     src_host_session = HostSession(id, params)
     src_qemu_cmd = params.create_qemu_cmd()
@@ -102,13 +103,22 @@ def run_case(params):
     src_remote_qmp.qmp_cmd_output(cmd)
 
     test.main_step_log('5.set downtime for migration')
+    flag_active = False
     cmd = '{"execute":"query-migrate"}'
-    while True:
+    end_time = time.time() + query_timeout
+    while time.time() < end_time:
         output = src_remote_qmp.qmp_cmd_output(cmd)
         if re.findall(r'"status": "active"', output):
+            flag_active = True
             break
-    downtime_cmd = '{"execute":"migrate_set_downtime","arguments":' \
-                '{"value": %s}}' % downtime
+        elif re.findall(r'"status": "failed"', output):
+            src_remote_qmp.qmp_cmd_output('Migration failed')
+    if (flag_active == False):
+        src_remote_qmp.qmp_cmd_output('Migration could not be active within %d'
+                                      % active_timeout)
+
+    downtime_cmd = '{"execute":"migrate-set-parameters",' \
+                   '"arguments":{"downtime-limit": %s}}' % downtime
     src_remote_qmp.qmp_cmd_output(cmd=downtime_cmd)
     paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
     output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd)
@@ -118,18 +128,33 @@ def run_case(params):
         test.test_error('Failed to change downtime')
 
     test.sub_step_log('Check the status of migration')
-    flag = query_migration(remote_qmp=src_remote_qmp,
-                           chk_timeout=query_timeout)
+    flag = False
+    cmd = '{"execute":"query-migrate"}'
+    end_time = time.time() + query_timeout
+    while time.time() < end_time:
+        output = src_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=8)
+        if re.findall(r'"remaining": 0', output):
+            flag = True
+            break
+        elif re.findall(r'"status": "failed"', output):
+            src_remote_qmp.test_error('migration failed')
+
     if (flag == False):
         test.test_error('Migration timeout in %d' % query_timeout)
 
     test.main_step_log('6.Check status of guest in des host')
     cmd = '{"execute":"query-status"}'
-    while True:
-        output = dst_remote_qmp.qmp_cmd_output(cmd=cmd)
+    flag_running = False
+    end_time = time.time() + running_timeout
+    while time.time() < end_time:
+        output = dst_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=3)
         if re.findall(r'"status": "running"', output):
+            flag_running = True
             break
-        time.sleep(5)
+
+    if (flag_running == False):
+        test.test_error('Dst guest is not running after migration finished %d '
+                        'seconds' % running_timeout)
 
     test.sub_step_log('Check dmesg info ')
     cmd = 'dmesg'
