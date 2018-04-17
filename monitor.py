@@ -168,32 +168,11 @@ class RemoteSerialMonitor(RemoteMonitor):
         allput = ''
         end_time = time.time() + sub_timeout
         real_logined = False
-        sub_real_logined = False
         while time.time() < float(end_time):
             allput = allput + output
-            if re.findall(r'Last login:', allput):
-                if  re.findall(r']#', allput):
-                    real_logined = True
-                    break
-                else:
-                    while time.time() < float(end_time):
-                        allput = allput + output
-                        output = RemoteMonitor.rec_data(self,
-                                                        recv_timeout=recv_timeout,
-                                                        max_recv_data=max_recv_data, )
-                        RemoteMonitor.test_print(self, info=output,
-                                                 serial_debug=True)
-                        if re.findall(r']#', allput):
-                            sub_real_logined = True
-                            break
-                    err_info = 'No prompt \"[root@xxxx ~]# \" ' \
-                               'under %s sec after type user and password.' \
-                               % sub_timeout
-                    if sub_real_logined == True:
-                        real_logined = True
-                        break
-                    if sub_real_logined == False:
-                        RemoteMonitor.test_error(self, err_info)
+            if re.findall(r']#', allput):
+                real_logined = True
+                break
             output = RemoteMonitor.rec_data(self,
                                             recv_timeout=recv_timeout,
                                             max_recv_data=max_recv_data,)
@@ -307,6 +286,7 @@ class RemoteSerialMonitor(RemoteMonitor):
         cmd = "ifconfig | grep -E 'inet ' | awk '{ print $2}'"
         output = self.serial_cmd_output(cmd, recv_timeout=ip_timeout)
         for ip in output.splitlines():
+            ip = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", ip)[0]
             if ip == '127.0.0.1':
                 continue
             else:
