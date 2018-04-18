@@ -13,6 +13,7 @@ class Test():
         self.pid_list = []
         self.start_time = time.time()
         self.params = params
+        self.guest_name = params.get('vm_cmd_base')['name'][0]
 
     def log_echo_file(self, log_str, short_debug=True, serial_debug=False):
         prefix_file = self.case_id
@@ -248,7 +249,52 @@ class TestCmd(Test):
             output = "\n".join(lines)
         return output
 
-class CreateTest(Test, TestCmd):
+    def check_guest_process(self, src_ip=None, dst_ip=None):
+        pid_list = []
+        dst_pid_list = []
+        output = ''
+        if dst_ip:
+            src_cmd_check = 'ssh root@%s ps -axu | grep %s | grep -v grep' \
+                            % (dst_ip, self.guest_name)
+            output, _ = self.subprocess_cmd_base(echo_cmd=True,
+                                                 verbose=True, cmd=src_cmd_check)
+            if output:
+                pid = re.split(r"\s+", output)[1]
+                info =  'Found a %s dst guest process : pid = %s' \
+                        % (self.guest_name, pid)
+                Test.test_print(self, info)
+                self.kill_dst_guest_process(dst_ip, pid)
+            else:
+                info = 'No found %s dst guest process' % self.guest_name
+                Test.test_print(self, info)
+        if src_ip:
+            src_cmd_check = "ps -axu| grep %s | grep -vE 'grep|ssh'" % self.guest_name
+            output, _ = self.subprocess_cmd_base(echo_cmd=False,
+                                                 verbose=False, cmd=src_cmd_check)
+            if output:
+                pid = re.split(r"\s+", output)[1]
+                info =  'Found a %s guest process : pid = %s' % (self.guest_name, pid)
+                Test.test_print(self, info)
+                self.kill_guest_process(pid)
+            else:
+                info = 'No found %s guest process' % self.guest_name
+                Test.test_print(self, info)
+
+    def kill_guest_process(self, pid):
+        cmd = 'kill -9 %s' % pid
+        self.subprocess_cmd_base(cmd=cmd, enable_output=False)
+        time.sleep(1.5)
+        # Check pid until killed completely.
+        self.check_guest_process()
+
+    def kill_dst_guest_process(self, dst_ip, pid):
+        cmd = 'ssh root@%s kill -9 %s' %(dst_ip, pid)
+        self.subprocess_cmd_base(cmd=cmd, enable_output=False)
+        time.sleep(1.5)
+        # Check pid until killed completely.
+        self.check_guest_process()
+
+class CreateTest(TestCmd):
     def __init__(self, case_id, params):
         self.case_id = case_id
         self.id = case_id
@@ -257,70 +303,23 @@ class CreateTest(Test, TestCmd):
         self.src_ip = params.get('src_host_ip')
         self.timeout = params.get('timeout')
         self.passwd =params.get('host_passwd')
-        Test.__init__(self, self.id, self.params)
-        self.guest_name = params.get('vm_cmd_base')['name'][0]
+        TestCmd.__init__(self, self.id, self.params)
         self.clear_env()
 
     def get_id(self):
         info = 'Start to run case : %s' % self.case_id
-        Test.test_print(self, info)
-        Test.test_print(self, '%s\n' % ('*' * 50))
+        TestCmd.test_print(self, info)
+        TestCmd.test_print(self, '%s\n' % ('*' * 50))
         return self.id
-
-    def check_guest_process(self):
-        pid_list = []
-        dst_pid_list = []
-        output = ''
-
-        if self.dst_ip:
-            src_cmd_check = 'ssh root@%s ps -axu | grep %s | grep -v grep' \
-                            % (self.dst_ip, self.guest_name)
-            output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
-                                                    verbose=False, cmd=src_cmd_check)
-            if output:
-                pid = re.split(r"\s+", output)[1]
-                info =  'Found a %s dst guest process : pid = %s' \
-                        % (self.guest_name, pid)
-                TestCmd.test_print(self, info)
-                self.kill_dst_guest_process(pid)
-            else:
-                info = 'No found %s dst guest process' % self.guest_name
-                TestCmd.test_print(self, info)
-
-        src_cmd_check = "ps -axu| grep %s | grep -vE 'grep|ssh'" % self.guest_name
-        output, _ = TestCmd.subprocess_cmd_base(self, echo_cmd=False,
-                                                verbose=False, cmd=src_cmd_check)
-        if output:
-            pid = re.split(r"\s+", output)[1]
-            info =  'Found a %s guest process : pid = %s' % (self.guest_name, pid)
-            TestCmd.test_print(self, info)
-            self.kill_guest_process(pid)
-        else:
-            info = 'No found %s guest process' % self.guest_name
-            TestCmd.test_print(self, info)
-
-    def kill_guest_process(self, pid):
-            cmd = 'kill -9 %s' % pid
-            TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
-            time.sleep(1.5)
-            # Check pid until killed completely.
-            self.check_guest_process()
-
-    def kill_dst_guest_process(self, pid):
-            cmd = 'ssh root@%s kill -9 %s' %(self.dst_ip, pid)
-            TestCmd.subprocess_cmd_base(self, cmd=cmd, enable_output=False)
-            time.sleep(1.5)
-            # Check pid until killed completely.
-            self.check_guest_process()
 
     def clear_env(self):
         pid_list = []
         dst_pid_list = []
-        Test.test_print(self, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        Test.test_print(self, '======= Checking host kernel version: =======')
+        TestCmd.test_print(self, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        TestCmd.test_print(self, '======= Checking host kernel version: =======')
         TestCmd.subprocess_cmd_base(self, cmd='uname -r')
         if self.dst_ip:
-            Test.test_print(self, '======= Checking host kernel '
+            TestCmd.test_print(self, '======= Checking host kernel '
                                   'version on dst host: =======')
             cmd = 'ssh root@%s uname -r' %(self.dst_ip)
             TestCmd.subprocess_cmd_base(self, cmd=cmd)
@@ -328,11 +327,11 @@ class CreateTest(Test, TestCmd):
         Test.test_print(self, '======= Checking the version of qemu: =======')
         TestCmd.subprocess_cmd_base(self, cmd='/usr/libexec/qemu-kvm -version')
         if self.dst_ip:
-            Test.test_print(self, '======= Checking the version of '
+            TestCmd.test_print(self, '======= Checking the version of '
                                   'qemu on dst host: =======')
             cmd = 'ssh root@%s /usr/libexec/qemu-kvm -version' %(self.dst_ip)
             TestCmd.subprocess_cmd_base(self, cmd=cmd)
 
-        Test.test_print(self,'======= Checking guest process existed =======')
-        self.check_guest_process()
-        Test.test_print(self, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        TestCmd.test_print(self,'======= Checking guest process existed =======')
+        TestCmd.check_guest_process(self, src_ip=self.src_ip, dst_ip=self.dst_ip)
+        TestCmd.test_print(self, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')

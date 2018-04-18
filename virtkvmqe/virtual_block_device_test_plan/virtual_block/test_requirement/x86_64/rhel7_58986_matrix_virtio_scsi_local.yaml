@@ -18,7 +18,7 @@ host_passwd: 'kvmautotest'
 guest_passwd: 'kvmautotest'
 
 # Set your source and destination host ip address.
-host_ip: 'xxx.xxx.xxx.xxx'
+src_host_ip: 'xxx.xxx.xxx.xxx'
 
 # Set the test requirement info.
 test_requirement:

@@ -6,7 +6,7 @@ import re
 import time
 
 def run_case(params):
-    host_ip = params.get('host_ip')
+    src_host_ip = params.get('src_src_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
 
@@ -34,7 +34,7 @@ def run_case(params):
     host_session.boot_guest(qemu_cmd)
 
     test.sub_step_log('Connecting to serial')
-    serial = RemoteSerialMonitor(id, params, host_ip, serial_port)
+    serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
     vm_ip = serial.serial_login()
 
     guest_session = GuestSession(vm_ip, id, params)
