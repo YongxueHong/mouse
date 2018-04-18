@@ -6,7 +6,7 @@ import re
 import time
 
 def run_case(params):
-    host_ip = params.get('host_ip')
+    src_host_ip = params.get('src_src_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
 
@@ -15,14 +15,12 @@ def run_case(params):
     host_session = HostSession(id, params)
 
     test.main_step_log('1. do system_reset when guest booting')
-    #params.vm_base_cmd_add('S', 'None')
     qemu_cmd = params.create_qemu_cmd()
     host_session.boot_guest(qemu_cmd, vm_alias='src')
 
     test.sub_step_log('Connecting to serial')
-    serial = RemoteSerialMonitor(id, params, host_ip, serial_port)
-    remote_qmp = RemoteQMPMonitor(id, params, host_ip, qmp_port)
-    #remote_qmp.qmp_cmd_output('{ "execute": "cont" }')
+    serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
+    remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
     timeout = 300
     endtime = time.time() + timeout
