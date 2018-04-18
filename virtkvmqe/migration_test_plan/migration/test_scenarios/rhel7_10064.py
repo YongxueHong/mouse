@@ -141,5 +141,5 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    dst_serial.serial_shutdown_vm()
+    guest_session.guest_shutdown_vm(serial=dst_serial)
 

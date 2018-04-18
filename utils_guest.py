@@ -2,6 +2,7 @@ import re
 import string
 from vm import TestCmd
 import paramiko
+import time
 
 class GuestSession(TestCmd):
     def __init__(self, ip, case_id, params):
@@ -61,3 +62,20 @@ class GuestSession(TestCmd):
         output = self.guest_cmd_output(cmd)
         if re.findall(r'Call Trace:', output):
             TestCmd.test_error(self, 'Guest hit call trace')
+
+    def guest_shutdown_vm(self, serial, timeout=300):
+        self.guest_cmd_output('shutdown -h now')
+        output = ''
+        downed = False
+        end_time = time.time() + timeout
+        while time.time() < float(end_time):
+            output = output + serial.serial_output()
+            if re.findall(r'Power down', output):
+                downed = True
+                break
+            if re.findall(r'Call Trace', output):
+                TestCmd.test_error(
+                    self, 'Guest hit call trace.')
+        if downed == False:
+            TestCmd.test_error(
+                self, 'Failed to shutdown vm under %s sec.' % timeout)

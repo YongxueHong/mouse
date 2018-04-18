@@ -130,7 +130,7 @@ def run_case(params):
         dst_guest_session.test_error('Guest hit call trace')
 
     test.main_step_log('Shut down guest and quit src qemu')
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_shutdown_vm(serial=dst_serial)
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
