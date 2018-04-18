@@ -133,7 +133,7 @@ def run_case(params):
     dst_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('6.3 Shutdown guest successfully')
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_shutdown_vm(serial=dst_serial)
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:

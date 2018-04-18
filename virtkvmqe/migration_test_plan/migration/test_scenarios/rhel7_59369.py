@@ -116,4 +116,4 @@ def run_case(params):
     else:
         test.test_error('After reboot, the guest cpus info is wrong')
 
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_shutdown_vm(serial=dst_serial)

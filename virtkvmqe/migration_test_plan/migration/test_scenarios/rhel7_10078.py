@@ -142,7 +142,7 @@ def run_case(params):
     src_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('11.3 quit qemu on dst end and shutdown vm on src end')
-    src_serial.serial_shutdown_vm()
+    src_guest_session.guest_shutdown_vm(serial=src_serial)
 
     output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:

@@ -126,9 +126,11 @@ def run_case(params):
     dst_serial.serial_cmd_output('reboot')
     dst_guest_ip = dst_serial.serial_login()
 
-    test.sub_step_log('Shut down dst guest and quit src qemu')
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session = GuestSession(case_id=id, params=params,
+                                     ip=dst_guest_ip)
 
+    test.sub_step_log('Shut down dst guest and quit src qemu')
+    dst_guest_session.guest_shutdown_vm(serial=dst_serial)
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src end')

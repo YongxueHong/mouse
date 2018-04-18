@@ -41,4 +41,4 @@ def run_case(params):
     guest_session.guest_cmd_output('lsblk')
     guest_session.guest_cmd_output('lsscsi')
 
-    serial.serial_shutdown_vm()
+    guest_session.guest_shutdown_vm(serial=serial)

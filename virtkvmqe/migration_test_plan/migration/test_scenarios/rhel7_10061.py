@@ -158,5 +158,5 @@ def run_case(params):
 
     test.sub_step_log('7.5 Shutdown guest successfully')
 
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_shutdown_vm(serial=dst_serial)
     

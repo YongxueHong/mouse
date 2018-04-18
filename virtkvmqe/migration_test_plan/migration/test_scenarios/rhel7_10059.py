@@ -133,7 +133,7 @@ def run_case(params):
     if re.findall(r'Call Trace:', output):
         dst_guest_session.test_error('Guest hit call trace')
 
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_shutdown_vm(serial=dst_serial)
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
