@@ -12,6 +12,7 @@ def run_case(params):
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
     incoming_port = params.get('incoming_port')
+    guest_arch = params.get('guest_arch')
     test = CreateTest(case_id='rhel7_10026', params=params)
     id = test.get_id()
     guest_pwd = params.get('guest_passwd')
@@ -37,7 +38,10 @@ def run_case(params):
     test.main_step_log('3. keep reboot vm with system_reset, let guest '
                        'in bios stage, before kernel loading')
     src_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
-    keyword = 'SLOF'
+    if 'ppc64' in guest_arch:
+        keyword = 'SLOF'
+    elif 'x86_64' in guest_arch:
+        keyword = '[    0.000000]'
     while 1:
         serial_output = src_serial.serial_output(max_recv_data=128,
                                                  search_str=keyword)
