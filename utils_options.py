@@ -39,7 +39,7 @@ help_info = "Usage: \n" \
             "               Run given cases with $times. \n" \
             "Please see README for more information."
 
-class Options():
+class Options(object):
     def __init__(self):
         self.options = self.initial_options()
 

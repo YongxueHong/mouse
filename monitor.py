@@ -11,7 +11,8 @@ class RemoteMonitor(Test):
     MAX_RECEIVE_DATA = 1024
 
     def __init__(self, case_id, params, ip, port):
-        Test.__init__(self, case_id=case_id, params=params)
+        #Test.__init__(self, case_id=case_id, params=params)
+        super(RemoteMonitor, self).__init__(case_id=case_id, params=params)
         self._ip = ip
         self._qmp_port = int(params.get('qmp_port'))
         self._serial_port = int(params.get('serial_port'))
@@ -90,8 +91,10 @@ class RemoteQMPMonitor(RemoteMonitor):
         self._ip = ip
         self._port = port
         self._address = (self._ip, self._port)
-        RemoteMonitor.__init__(self, case_id=case_id,
-                               params=params, ip=ip, port=port)
+        # RemoteMonitor.__init__(self, case_id=case_id,
+        #                        params=params, ip=ip, port=port)
+        super(RemoteQMPMonitor, self).__init__(case_id=case_id,
+                                               params=params, ip=ip, port=port)
         self.qmp_initial(recv_timeout, max_recv_data)
 
     def qmp_initial(self, recv_timeout, max_recv_data):
@@ -138,8 +141,8 @@ class RemoteSerialMonitor(RemoteMonitor):
         self._port = port
         self._parmas = params
         self._guest_passwd = params.get('guest_passwd')
-        RemoteMonitor.__init__(self, case_id=case_id, ip=ip,
-                               port=port, params=params)
+        super(RemoteSerialMonitor, self).__init__(case_id=case_id,
+                                               params=params, ip=ip, port=port)
 
     def prompt_password(self, output, recv_timeout=1,
                         max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
@@ -294,7 +297,8 @@ class RemoteSerialMonitor(RemoteMonitor):
                     RemoteMonitor.test_error(self, 'Could not get ip address!')
                 return ip
 
-    def serial_shutdown_vm(self, recv_timeout=2.0, timeout=600):
+    def serial_shutdown_vm(self, recv_timeout=3.0, timeout=600):
+        time.sleep(5)
         output = self.serial_cmd_output('shutdown -h now',
                                         recv_timeout=recv_timeout)
         downed = False
