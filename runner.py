@@ -15,7 +15,7 @@ class Status:
     FAILRED = '\033[91m'
     ENDC = '\033[5m'
 
-class CaseRunner():
+class CaseRunner(object):
     def __init__(self, params):
         self._bars = ['|', '/', '-', '\\', '|', '/', '-', '\\']
         self._params = params

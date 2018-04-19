@@ -7,7 +7,7 @@ import threading
 import re
 import select
 
-class Test():
+class Test(object):
     def __init__(self, case_id, params):
         self.case_id = case_id
         self.pid_list = []
@@ -135,7 +135,7 @@ class Test():
 
 class TestCmd(Test):
     def __init__(self, case_id, params):
-        Test.__init__(self, case_id=case_id, params=params)
+        super(TestCmd, self).__init__(case_id=case_id, params=params)
 
     def subprocess_cmd_base(self, cmd, echo_cmd=True, verbose=True,
                             enable_output=True, timeout=300):
@@ -303,7 +303,7 @@ class CreateTest(TestCmd):
         self.src_ip = params.get('src_host_ip')
         self.timeout = params.get('timeout')
         self.passwd =params.get('host_passwd')
-        TestCmd.__init__(self, self.id, self.params)
+        super(CreateTest, self).__init__(case_id=case_id, params=params)
         self.clear_env()
 
     def get_id(self):

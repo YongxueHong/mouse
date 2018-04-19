@@ -7,7 +7,7 @@ from usr_exceptions import Error
 BASE_FILE = os.path.dirname(os.path.abspath(__file__))
 
 
-class Params():
+class Params(object):
     def __init__(self, yaml_id=None, case_list=None):
         self._yaml_id = yaml_id
         self._case_list = case_list
