@@ -14,7 +14,6 @@ def run_case(params):
     nfs_server_list = params.get('nfs_server')
     src_host_ip = params.get('src_host_ip')
     guest_arch = params.get('guest_arch')
-    guest_name = params.get('vm_cmd_base')['name'][0]
 
     test = CreateTest(case_id='rhel7_10070', params=params)
     id = test.get_id()
@@ -230,22 +229,19 @@ def run_case(params):
         cmd = '{ "execute": "query-status" }'
         output = src_remote_qmp.qmp_cmd_output(cmd)
         if re.findall(r'postmigrate', output):
-            cmd = '{ "execute": "quit" }'
-            guest_chk = "ps -aux | grep %s | grep -vE grep" % guest_name
-            output = host_session.host_cmd_output(cmd=guest_chk,
-                                                  echo_cmd=False, verbose=False)
-            if output:
-                guest_pid = re.split(r"\s+", output)[1]
-                host_session.host_cmd_output('kill -9 %s' % guest_pid,
-                                             echo_cmd=False)
-            src_remote_qmp.qmp_cmd_output(cmd)
             flag_timeout = False
             break
+        elif re.findall(r'failed', output):
+            test.test_error('Migration failed')
         time.sleep(2)
 
     if flag_timeout == True:
         test.test_error('The guest status is not paused under %s sec.'
                         % chk_timeout)
+
+    cmd = '{ "execute": "quit" }'
+    src_remote_qmp.qmp_cmd_output(cmd)
+    host_session.check_guest_process(src_ip=src_host_ip)
 
     params.vm_base_cmd_add('incoming', '"exec: gzip -c -d %s"' % statefile)
     dst_qemu_cmd = params.create_qemu_cmd()
