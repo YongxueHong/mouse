@@ -44,7 +44,7 @@ class Test(object):
                         timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
                         run_log.write("%s: %s\n" % (timestamp, line))
 
-                except Exception, err:
+                except Exception as err:
                     txt = "Fail to record log to %s.\n" % log_file
                     txt += "Log content: %s\n" % log_str
                     txt += "Exception error: %s" % err
@@ -56,7 +56,7 @@ class Test(object):
                         timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
                         run_log.write("%s: %s\n" % (timestamp, line))
 
-                except Exception, err:
+                except Exception as err:
                     txt = "Fail to record log to %s.\n" % log_file
                     txt += "Log content: %s\n" % log_str
                     txt += "Exception error: %s" % err
@@ -68,53 +68,11 @@ class Test(object):
         self.log_echo_file(log_str=info, short_debug=short_debug,
                            serial_debug=serial_debug)
 
-    def total_test_time(self, start_time):
-        self._passed = True
-        test_time = time.time() - start_time
-        if format == 'sec':
-            print 'Total of test time :', test_time, 'sec'
-        elif format == 'min':
-            print 'Total of test time :', int(test_time / 60), 'min'
-        else:
-            time_info =  'Total of test time : %s min %s sec' \
-                         % (int(test_time / 60),
-                            int(test_time - int(test_time / 60) * 60))
-            self.test_print(info=time_info)
-
-    def open_vnc(self, ip, port, timeout=10):
-        self.vnc_ip = ip
-        self.vnc_port = port
-        data = ''
-        vnc_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        vnc_socket.connect((self.vnc_ip, self.vnc_port))
-        requet = 'Trying to connect vnc'
-        end_time = time.time() + timeout
-        while time.time() < end_time:
-            vnc_socket.send(requet)
-            data = vnc_socket.recv(1024)
-            if data:
-                break
-        print 'Client recevied :', data
-        vnc_socket.close()
-
-    def vnc_daemon(self, ip, port, timeout=10):
-        thread = threading.Thread(target=self.open_vnc, args=(ip, port, timeout))
-        thread.name = 'vnc'
-        thread.daemon = True
-        thread.start()
-
     def test_error(self, err_info):
         err_info = 'Case Error: ' + err_info
         self.log_echo_file(log_str=err_info)
         self.test_print(info=err_info)
         raise usr_exceptions.Error(err_info)
-
-
-    def test_pass(self):
-        pass_info = '%s \n' %('*' * 50)
-        pass_info += 'Case %s --- Pass \n' % self.case_id.split(':')[0]
-        self.test_print(info=pass_info)
-        self.total_test_time(start_time=self.start_time)
 
     def main_step_log(self, log):
         log_tag = '='
@@ -122,7 +80,7 @@ class Test(object):
         log_info = '%s Step %s %s' % (log_tag * log_tag_rept,
                                       log, log_tag * log_tag_rept)
         if self.params.get('verbose') == 'yes':
-            print log_info
+            print (log_info)
         Test.log_echo_file(self, log_str=log_info)
 
     def sub_step_log(self, str):
