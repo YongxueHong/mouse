@@ -55,7 +55,7 @@ class CaseRunner(object):
                     with open(log, "a") as run_log:
                         timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
                         run_log.write("%s: %s\n" % (timestamp, timeout_info))
-                    print timeout_info
+                    print (timeout_info)
 
     def display_process_bar(self, processor, start_time):
         sys.stdout.write(' ')
@@ -97,10 +97,10 @@ class CaseRunner(object):
         if self._run_result['PASS'] != 0:
             cnt = 1
             for pass_case in self._run_result['pass_cases']:
-                print '   %d: %s-%s (%s)' \
-                      % (cnt, pass_case.upper().replace('_', '-'),
-                         self._params.get('test_cases')[pass_case]['name'],
-                         self._run_result['case_time'][str(pass_case)])
+                print ('   %d: %s-%s (%s)'
+                       % (cnt, pass_case.upper().replace('_', '-'),
+                          self._params.get('test_cases')[pass_case]['name'],
+                          self._run_result['case_time'][str(pass_case)]))
                 cnt = cnt + 1
         print ('==>ERROR : %s '  %(self._run_result['ERROR']))
         if self._run_result['ERROR'] != 0:
