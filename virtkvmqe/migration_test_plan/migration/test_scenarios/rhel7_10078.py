@@ -134,7 +134,7 @@ def run_case(params):
                        'ping external host,and shutdown.')
     test.sub_step_log('11.1 Reboot src guest')
     src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
-    src_serial.serial_cmd(cmd='reboot')
+    src_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     src_guest_ip = src_serial.serial_login()
 
     test.sub_step_log('11.2 Ping external host and shutdown guest')

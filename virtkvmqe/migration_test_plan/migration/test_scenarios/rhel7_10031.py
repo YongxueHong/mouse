@@ -105,29 +105,19 @@ def run_case(params):
     if (check_info == False):
         test.test_error('Migration timeout')
 
-    test.sub_step_log('Login dst guest')
-    test.sub_step_log('Connecting to dst serial')
-    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
-    test.sub_step_log('check dmesg info')
-    cmd = 'dmesg'
-    output = dst_serial.serial_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        test.test_error('Guest hit call trace')
+    test.sub_step_log('4.1 Check dst guest status')
+    output = dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
+    if re.findall(r'"running": true', output):
+        test.test_print('guest is running on dst host')
+    else:
+        test.test_error('guest is not running on dst host')
 
-    dst_serial.serial_cmd_output('reboot')
+    test.sub_step_log('4.2 Login dst guest')
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     dst_guest_ip = dst_serial.serial_login()
     dst_guest_session = GuestSession(case_id=id, params=params,
                                      ip=dst_guest_ip)
-
-    test.sub_step_log('checking fio process')
-    output = dst_guest_session.guest_cmd_output('pgrep -x fio')
-    while output :
-        output = dst_guest_session.guest_cmd_output('pgrep -x fio')
-        time.sleep(3)
-
-    dst_guest_session.guest_cmd_output('dmesg')
-    if re.findall(r'Call Trace:', output):
-        dst_guest_session.test_error('Guest hit call trace')
 
     test.main_step_log('Shut down guest and quit src qemu')
     dst_serial.serial_shutdown_vm()

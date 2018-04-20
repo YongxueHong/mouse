@@ -120,11 +120,7 @@ def run_case(params):
     test.main_step_log('6 Check the status of guest')
     test.sub_step_log('6.1. Reboot guest')
     dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
-    cmd = 'dmesg'
-    output = dst_serial.serial_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output):
-       test.test_error('Guest hit call trace')
-    dst_serial.serial_cmd(cmd='reboot')
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('6.2 Ping external host')

@@ -23,7 +23,7 @@ def run_case(params):
 
     test.main_step_log('Scenario 1:src: vhost des'
                        'fileCopy: from src host to guest ')
-    test.main_step_log('1. Start VM in src host ')
+    test.main_step_log('1.1 Start VM in src host ')
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
     src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
@@ -33,13 +33,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params,
                                      ip=src_guest_ip)
 
-    test.sub_step_log('Check dmesg info ')
-    cmd = 'dmesg'
-    output = src_guest_session.guest_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        src_guest_session.test_error('Guest hit call trallce')
-
-    test.main_step_log('2. Start listening mode without vhost in des host ')
+    test.main_step_log('1.2. Start listening mode without vhost in des host ')
     params.vm_base_cmd_del('netdev','tap,id=tap0,vhost=on')
     params.vm_base_cmd_add('netdev','tap,id=tap0')
     incoming_val = 'tcp:0:%s' % (incoming_port)
@@ -49,7 +43,7 @@ def run_case(params):
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
-    test.main_step_log('3.Copy a large file(eg 2G) from host to guest '
+    test.main_step_log('1.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
                        'during transferring file.')
     src_host_session.host_cmd(cmd='rm -rf /home/file_host')
@@ -66,14 +60,14 @@ def run_case(params):
     thread.start()
     time.sleep(3)
 
-    test.main_step_log('4. Migrate to the destination')
+    test.main_step_log('1.4. Migrate to the destination')
     check_info = do_migration(remote_qmp=src_remote_qmp,
                               migrate_port=incoming_port, dst_ip=dst_host_ip,
                               chk_timeout=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout ')
 
-    test.main_step_log('5.After migration finishes,until transferring finished'
+    test.main_step_log('1.5.After migration finishes,until transferring finished'
                         'reboot guest,Check file in host and guest.'
                         'value of md5sum is the same.')
     test.sub_step_log('check status of transferring the file')
@@ -88,13 +82,9 @@ def run_case(params):
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
-    dst_serial.serial_cmd(cmd='reboot')
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     dst_guest_ip = dst_serial.serial_login()
     dst_guest_session = GuestSession(case_id=id,params=params,ip=dst_guest_ip)
-    cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        dst_guest_session.test_error('Guest hit call trace')
 
     test.sub_step_log('network of guest should be woking')
     external_host_ip = 'www.redhat.com'
@@ -111,25 +101,22 @@ def run_case(params):
     if file_src_host_md5.split(' ')[0] != file_guest_md5.split(' ')[0]:
         test.test_error('Value of md5sum error!')
 
-    test.sub_step_log('quit qemu on src end and shutdown vm on dst end')
+    test.sub_step_log('1.6 quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
     dst_serial.serial_shutdown_vm()
+    src_host_session.check_guest_process(src_ip=src_host_ip,
+                                         dst_ip=dst_host_ip)
 
-    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
-                                           recv_timeout=3)
-    if output:
-        dst_remote_qmp.test_error('Failed to quit qemu on dst host')
-
-    time.sleep(20)
+    time.sleep(3)
     test.main_step_log('Scenario 2.src: des: vhost,'
                        'fileCopy: from src host to guest')
     src_host_session = HostSession(id, params)
 
-    test.main_step_log('1. Start VM in src host ')
+    test.main_step_log('2.1. Start VM in src host ')
     incoming_val = 'tcp:0:%s' % (incoming_port)
     params.vm_base_cmd_del('incoming', incoming_val)
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
@@ -141,13 +128,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params,
                                      ip=src_guest_ip)
 
-    test.sub_step_log('Check dmesg info ')
-    cmd = 'dmesg'
-    output = src_guest_session.guest_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        src_guest_session.test_error('Guest hit call trallce')
-
-    test.main_step_log('2. Start listening mode without vhost in des host ')
+    test.main_step_log('2.2 Start listening mode without vhost in des host ')
     params.vm_base_cmd_del('netdev', 'tap,id=tap0')
     params.vm_base_cmd_add('netdev', 'tap,id=tap0,vhost=on')
     incoming_val = 'tcp:0:%s' % (incoming_port)
@@ -157,7 +138,7 @@ def run_case(params):
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
-    test.main_step_log('3.Copy a large file(eg 2G) from host to guest '
+    test.main_step_log('2.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
                        'during transferring file.')
     src_host_session.host_cmd(cmd='rm -rf /home/file_host')
@@ -174,14 +155,14 @@ def run_case(params):
     thread.start()
     time.sleep(3)
 
-    test.main_step_log('4. Migrate to the destination')
+    test.main_step_log('2.4. Migrate to the destination')
     check_info = do_migration(remote_qmp=src_remote_qmp,
                               migrate_port=incoming_port, dst_ip=dst_host_ip,
                               chk_timeout=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout ')
 
-    test.main_step_log('5.After migration finishes,until transferring finished'
+    test.main_step_log('2.5.After migration finishes,until transferring finished'
                        'reboot guest,Check file in host and guest.'
                        'value of md5sum is the same.')
     test.sub_step_log('check status of transferring the file')
@@ -196,14 +177,10 @@ def run_case(params):
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
-    dst_serial.serial_cmd(cmd='reboot')
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     dst_guest_ip = dst_serial.serial_login()
     dst_guest_session = GuestSession(case_id=id, params=params,
                                      ip=dst_guest_ip)
-    cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        dst_guest_session.test_error('Guest hit call trace')
 
     test.sub_step_log('network of guest should be woking')
     external_host_ip = 'www.redhat.com'
@@ -220,24 +197,22 @@ def run_case(params):
     if file_src_host_md5.split(' ')[0] != file_guest_md5.split(' ')[0]:
         test.test_error('Value of md5sum error!')
 
-    test.sub_step_log('6.quit qemu on src end and shutdown vm on dst end')
+    test.sub_step_log('2.6.quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
     dst_serial.serial_shutdown_vm()
-    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
-                                           recv_timeout=3)
-    if output:
-        dst_remote_qmp.test_error('Failed to quit qemu on dst host')
+    src_host_session.check_guest_process(src_ip=src_host_ip,
+                                         dst_ip=dst_host_ip)
 
-    time.sleep(20)
+    time.sleep(3)
     test.main_step_log('Scenario 3.src:vhost des:,'
                        'fileCopy: from src guest to host')
     src_host_session = HostSession(id, params)
 
-    test.main_step_log('1. Start VM in src host ')
+    test.main_step_log('3.1. Start VM in src host ')
     incoming_val = 'tcp:0:%s' % (incoming_port)
     params.vm_base_cmd_del('incoming', incoming_val)
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
@@ -249,13 +224,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params,
                                      ip=src_guest_ip)
 
-    test.sub_step_log('Check dmesg info ')
-    cmd = 'dmesg'
-    output = src_guest_session.guest_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        src_guest_session.test_error('Guest hit call trallce')
-
-    test.main_step_log('2. Start listening mode without vhost in des host ')
+    test.main_step_log('3.2. Start listening mode without vhost in des host ')
     params.vm_base_cmd_del('netdev','tap,id=tap0,vhost=on')
     params.vm_base_cmd_add('netdev','tap,id=tap0')
     incoming_val = 'tcp:0:%s' % (incoming_port)
@@ -265,7 +234,7 @@ def run_case(params):
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
-    test.main_step_log('3.Copy a large file(eg 2G) from host to guest '
+    test.main_step_log('3.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
                        'during transferring file. ')
     src_guest_session.guest_cmd_output(cmd='rm -rf /home/file_guest')
@@ -283,14 +252,14 @@ def run_case(params):
     thread.start()
     time.sleep(3)
 
-    test.main_step_log('4. Migrate to the destination')
+    test.main_step_log('3.4. Migrate to the destination')
     check_info = do_migration(remote_qmp=src_remote_qmp,
                               migrate_port=incoming_port, dst_ip=dst_host_ip,
                               chk_timeout=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout ')
 
-    test.main_step_log('5.After migration finishes,until transferring finished'
+    test.main_step_log('3.5.After migration finishes,until transferring finished'
                         'reboot guest,Check file in host and guest.'
                         'value of md5sum is the same.')
     test.sub_step_log('check status of transferring the file')
@@ -305,13 +274,9 @@ def run_case(params):
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
-    dst_serial.serial_cmd(cmd='reboot')
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     dst_guest_ip = dst_serial.serial_login()
     dst_guest_session = GuestSession(case_id=id,params=params,ip=dst_guest_ip)
-    cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        dst_guest_session.test_error('Guest hit call trace')
 
     test.sub_step_log('network of guest should be woking')
     external_host_ip = 'www.redhat.com'
@@ -328,24 +293,22 @@ def run_case(params):
     if file_src_host_md5.split(' ')[0] != file_guest_md5.split(' ')[0]:
         test.test_error('Value of md5sum error!')
 
-    test.sub_step_log('quit qemu on src end and shutdown vm on dst end')
+    test.sub_step_log('3.6 quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
     dst_serial.serial_shutdown_vm()
-    
-    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
-                                           recv_timeout=3)
-    if output:
-        dst_remote_qmp.test_error('Failed to quit qemu on dst host')
+    src_host_session.check_guest_process(src_ip=src_host_ip,
+                                         dst_ip=dst_host_ip)
 
+    time.sleep(3)
     test.main_step_log('Scenario 4.src: des:vhost ,'
                        'fileCopy: from src guest to host')
     src_host_session = HostSession(id, params)
 
-    test.main_step_log('1. Start VM in src host ')
+    test.main_step_log('4.1. Start VM in src host ')
     incoming_val = 'tcp:0:%s' % (incoming_port)
     params.vm_base_cmd_del('incoming', incoming_val)
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
@@ -357,13 +320,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params,
                                      ip=src_guest_ip)
 
-    test.sub_step_log('Check dmesg info ')
-    cmd = 'dmesg'
-    output = src_guest_session.guest_cmd_output(cmd)
-    if re.findall(r'Call Trace:', output):
-        src_guest_session.test_error('Guest hit call trallce')
-
-    test.main_step_log('2. Start listening mode without vhost in des host ')
+    test.main_step_log('4.2. Start listening mode without vhost in des host ')
     params.vm_base_cmd_del('netdev', 'tap,id=tap0')
     params.vm_base_cmd_add('netdev', 'tap,id=tap0,vhost=on')
     incoming_val = 'tcp:0:%s' % (incoming_port)
@@ -373,7 +330,7 @@ def run_case(params):
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
-    test.main_step_log('3.Copy a large file(eg 2G) from host to guest '
+    test.main_step_log('4.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
                        'during transferring file.')
     src_guest_session.guest_cmd_output(cmd='rm -rf /home/file_guest')
@@ -391,14 +348,14 @@ def run_case(params):
     thread.start()
     time.sleep(3)
 
-    test.main_step_log('4. Migrate to the destination')
+    test.main_step_log('4.4. Migrate to the destination')
     check_info = do_migration(remote_qmp=src_remote_qmp,
                               migrate_port=incoming_port, dst_ip=dst_host_ip,
                               chk_timeout=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout ')
 
-    test.main_step_log('5.After migration finishes,until transferring finished'
+    test.main_step_log('4.5.After migration finishes,until transferring finished'
                        'reboot guest,Check file in host and guest.'
                        'value of md5sum is the same.')
     while True:
@@ -412,14 +369,10 @@ def run_case(params):
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
-    dst_serial.serial_cmd(cmd='reboot')
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
     dst_guest_ip = dst_serial.serial_login()
     dst_guest_session = GuestSession(case_id=id, params=params,
                                      ip=dst_guest_ip)
-    cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        dst_guest_session.test_error('Guest hit call trace')
 
     test.sub_step_log('network of guest should be woking')
     external_host_ip = 'www.redhat.com'
@@ -436,11 +389,12 @@ def run_case(params):
     if file_src_host_md5.split(' ')[0] != file_guest_md5.split(' ')[0]:
         test.test_error('Value of md5sum error!')
 
-    test.sub_step_log('quit qemu on src end and shutdown vm on dst end')
+    test.sub_step_log('4.6 quit qemu on src end and shutdown vm on dst end')
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
                                            recv_timeout=3)
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
     dst_serial.serial_shutdown_vm()
+
 
