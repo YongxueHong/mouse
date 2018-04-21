@@ -92,10 +92,12 @@ def run_case(params):
     if re.findall(r'Call Trace:', output):
         dst_guest_session.test_error('Guest hit call trace')
 
-    file_src_host_md5 = src_host_session.host_cmd_output(cmd='md5sum /home/file_host')
-    file_guest_md5 = dst_guest_session.guest_cmd_output(cmd='md5sum /home/file_guest')
+    cmd = "md5sum /home/file_host | awk '{print $1}'"
+    file_src_host_md5 = src_host_session.host_cmd_output(cmd)
+    cmd = "md5sum /home/file_guest | awk '{print $1}'"
+    file_guest_md5 = dst_guest_session.guest_cmd_output(cmd)
 
-    if file_src_host_md5.split(' ')[0] != file_guest_md5.split(' ')[0]:
+    if file_src_host_md5 != file_guest_md5:
         test.test_error('Value of md5sum error!')
 
     test.main_step_log('7. Transfer file from guest to host')
@@ -116,13 +118,13 @@ def run_case(params):
 
     test.main_step_log('9. Check md5sum after file transfer')
 
-    file_src_host_md5 = src_host_session.host_cmd_output(cmd='md5sum /home/file_host')
+    cmd = "md5sum /home/file_host | awk '{print $1}'"
+    file_src_host_md5 = src_host_session.host_cmd_output(cmd)
 
-    file_src_host2_md5 = src_host_session.host_cmd_output(cmd='md5sum /home/file_host2')
+    cmd = "md5sum /home/file_host2 | awk '{print $1}'"
+    file_src_host2_md5 = src_host_session.host_cmd_output(cmd)
 
-    if file_src_host_md5.split(' ')[0] != file_src_host2_md5.split(' ')[0] \
-            and file_src_host_md5.split(' ')[0] != file_guest_md5.split(' ')[0] \
-            and file_src_host2_md5.split(' ')[0] != file_guest_md5.split(' ')[0] :
+    if file_src_host_md5 != file_src_host2_md5:
         test.test_error('Value of md5sum error!')
 
     test.sub_step_log('Login dst guest after ping-pong migration')

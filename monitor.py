@@ -24,12 +24,12 @@ class TelnetMonitor(Test):
     def close(self):
         self._telnet_client.close()
         Test.test_print(self,
-                        'Close the telent (%s:%s).' % (self._ip, self._port))
+                        'Closed the telent(%s:%s).' % (self._ip, self._port))
 
     def __del__(self):
         self._telnet_client.close()
         Test.test_print(self,
-                        'Close the telent (%s:%s).' % (self._ip, self._port))
+                        'Closed the telent(%s:%s).' % (self._ip, self._port))
 
 class TelnetSerial(TelnetMonitor):
     def __init__(self, case_id, params, ip, port):
@@ -103,12 +103,12 @@ class RemoteMonitor(Test):
     def __del__(self):
         self._socket.close()
         Test.test_print(self,
-                        'Closed the monitor (%s:%s).' % (self._ip, self._port))
+                        'Closed the monitor(%s:%s).' % (self._ip, self._port))
 
     def close(self):
         self._socket.close()
         Test.test_print(self,
-                        'Closed the monitor (%s:%s).' % (self._ip, self._port))
+                        'Closed the monitor(%s:%s).' % (self._ip, self._port))
 
     def data_availabl(self, timeout=DATA_AVAILABLE_TIMEOUT):
         try:
