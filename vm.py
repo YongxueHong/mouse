@@ -69,9 +69,8 @@ class Test(object):
                            serial_debug=serial_debug)
 
     def test_error(self, err_info):
-        err_info = 'Case Error: ' + err_info
-        self.log_echo_file(log_str=err_info)
-        self.test_print(info=err_info)
+        info = 'Case Error: ' + err_info
+        self.test_print(info=info)
         raise usr_exceptions.Error(err_info)
 
     def main_step_log(self, log):
