@@ -16,7 +16,6 @@ def run_case(params):
 
     test = CreateTest(case_id='rhel7_10062', params=params)
     id = test.get_id()
-    guest_passwd = params.get('guest_passwd')
     query_migration_time = 2400
     src_host_session = HostSession(id, params)
     src_qemu_cmd = params.create_qemu_cmd()
@@ -42,6 +41,7 @@ def run_case(params):
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
 
     test.main_step_log('1.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
@@ -75,9 +75,7 @@ def run_case(params):
         pid = src_host_session.host_cmd_output('pgrep -x scp')
         if not pid:
             break
-    output=src_guest_session.guest_cmd_output(cmd='dmesg')
-    if re.findall(r'Call Trace:', output) or not output:
-        src_guest_session.test_error('Guest hit call trace')
+    time.sleep(3)
 
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
@@ -137,6 +135,7 @@ def run_case(params):
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
 
     test.main_step_log('2.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
@@ -170,9 +169,8 @@ def run_case(params):
         pid = src_host_session.host_cmd_output('pgrep -x scp')
         if not pid:
             break
-    output = src_guest_session.guest_cmd_output(cmd='dmesg')
-    if re.findall(r'Call Trace:', output) or not output:
-        src_guest_session.test_error('Guest hit call trace')
+
+    time.sleep(3)
 
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
@@ -233,6 +231,7 @@ def run_case(params):
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
 
     test.main_step_log('3.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
@@ -267,10 +266,8 @@ def run_case(params):
         pid = src_host_session.host_cmd_output('pgrep -x scp')
         if not pid:
             break
-    output=src_guest_session.guest_cmd_output(cmd='dmesg')
-    if re.findall(r'Call Trace:', output) or not output:
-        src_guest_session.test_error('Guest hit call trace')
 
+    time.sleep(3)
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
@@ -329,6 +326,7 @@ def run_case(params):
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
+    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
 
     test.main_step_log('4.3.Copy a large file(eg 2G) from host to guest '
                        'in src host, then start to do migration '
@@ -362,10 +360,8 @@ def run_case(params):
         pid = src_host_session.host_cmd_output('pgrep -x scp')
         if not pid:
             break
-    output = src_guest_session.guest_cmd_output(cmd='dmesg')
-    if re.findall(r'Call Trace:', output) or not output:
-        src_guest_session.test_error('Guest hit call trace')
 
+    time.sleep(3)
     test.sub_step_log('reboot guest')
     dst_serial = RemoteSerialMonitor(case_id=id, params=params, ip=dst_host_ip,
                                      port=serial_port)
@@ -395,6 +391,10 @@ def run_case(params):
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src host')
 
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_cmd_output('shutdown -h now')
+    output = dst_serial.serial_output()
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
+
 
 
