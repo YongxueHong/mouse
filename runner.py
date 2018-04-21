@@ -124,18 +124,19 @@ class CaseRunner(object):
         except KeyboardInterrupt:
             raise
         except :
-            test_log_dir = os.path.join(self._params.get('log_dir'), case + '_logs')
+            if self._params.get('verbose') == 'yes':
+                traceback.print_exc()
+            test_log_dir = os.path.join(self._params.get('log_dir'),
+                                    case + '-'
+                                    + self._params.get('sub_dir_timestamp')
+                                    +'_logs')
             log_file = test_log_dir + '/' + 'long_debug.log'
             log_file_list.append(log_file)
             log_file = test_log_dir + '/' + 'short_debug.log'
             log_file_list.append(log_file)
             for log_file in log_file_list:
                 if os.path.exists(log_file):
-                    if self._params.get('verbose') == 'no':
-                        traceback.print_exc(file=open(log_file, "a"))
-                    if self._params.get('verbose') == 'yes':
-                        traceback.print_exc(file=open(log_file, "a"))
-                        traceback.print_exc()
+                    traceback.print_exc(file=open(log_file, "a"))
             case_queue.put(case)
 
     def main_run(self):
