@@ -6,7 +6,7 @@ import re
 import time
 
 def run_case(params):
-    src_host_ip = params.get('src_src_host_ip')
+    src_host_ip = params.get('src_host_ip')
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
 
