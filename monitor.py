@@ -3,6 +3,78 @@ import select
 import re
 import time
 from vm import Test
+from telnetlib import Telnet
+
+
+class TelnetMonitor(Test):
+    CONNECT_TIMEOUT = 60
+    def __init__(self, case_id, params, ip, port):
+        super(TelnetMonitor, self).__init__(case_id=case_id, params=params)
+        self._ip = ip
+        self._guest_passwd = params.get('guest_passwd')
+        self._port = port
+        try:
+            self._telnet_client = Telnet(host=self._ip, port=self._port)
+        except EOFError:
+            Test.test_error(self, 'Fail to connect to telnet server(%s:%s).'
+                            % (ip, port))
+        self._telnet_client.open(self._ip, port=self._port,
+                                 timeout=self.CONNECT_TIMEOUT)
+
+    def close(self):
+        self._telnet_client.close()
+        Test.test_print(self,
+                        'Close the telent (%s:%s).' % (self._ip, self._port))
+
+    def __del__(self):
+        self._telnet_client.close()
+        Test.test_print(self,
+                        'Close the telent (%s:%s).' % (self._ip, self._port))
+
+class TelnetSerial(TelnetMonitor):
+    def __init__(self, case_id, params, ip, port):
+        super(TelnetSerial, self).__init__(case_id, params, ip, port)
+        self._login_timeout = 300
+        self._passwd_timeout = 5
+        self._shell_timeout = 5
+        self._guest_passwd = params.get('guest_passwd')
+
+    def serial_login(self, timeout=300):
+        output = ''
+        allput = ''
+        while 1:
+            n, match, output = self._telnet_client.expect([b'\n', b'login:'], timeout)
+            TelnetMonitor.test_print(self, output)
+            allput = allput + output
+            if 'login:' in output:
+                break
+        if not output:
+            TelnetMonitor.test_error(self, 'No prompt \"login:\" under %s" '
+                                     % self._login_timeout)
+        else:
+            if 'Call Trace:' in allput:
+                TelnetMonitor.test_error(self, 'Hit Call Trace during guest boot.')
+            TelnetMonitor.test_print(self, output)
+        self._telnet_client.write('root'.encode('ascii') + b"\n")
+
+        output = self._telnet_client.read_until(
+            b'Password:', timeout=self._passwd_timeout)
+        if not output:
+            TelnetMonitor.test_error(self, 'No prompt \"Password:\" under %s" '
+                                     % self._passwd_timeout)
+        else:
+            TelnetMonitor.test_print(self, output)
+        TelnetMonitor.test_print(self, self._guest_passwd)
+        self._telnet_client.write(self._guest_passwd.encode('ascii') + b"\n")
+
+        output = self._telnet_client.read_until(
+            b'#]', timeout=self._passwd_timeout)
+        if not output:
+            TelnetMonitor.test_error(self, 'No prompt \"#]:\" under %s" '
+                                     % self._shell_timeout)
+        else:
+            TelnetMonitor.test_print(self, output)
+
 
 class RemoteMonitor(Test):
     CONNECT_TIMEOUT = 60
@@ -11,7 +83,6 @@ class RemoteMonitor(Test):
     MAX_RECEIVE_DATA = 1024
 
     def __init__(self, case_id, params, ip, port):
-        #Test.__init__(self, case_id=case_id, params=params)
         super(RemoteMonitor, self).__init__(case_id=case_id, params=params)
         self._ip = ip
         self._qmp_port = int(params.get('qmp_port'))
@@ -31,9 +102,13 @@ class RemoteMonitor(Test):
 
     def __del__(self):
         self._socket.close()
+        Test.test_print(self,
+                        'Closed the monitor (%s:%s).' % (self._ip, self._port))
 
     def close(self):
         self._socket.close()
+        Test.test_print(self,
+                        'Closed the monitor (%s:%s).' % (self._ip, self._port))
 
     def data_availabl(self, timeout=DATA_AVAILABLE_TIMEOUT):
         try:
@@ -91,8 +166,6 @@ class RemoteQMPMonitor(RemoteMonitor):
         self._ip = ip
         self._port = port
         self._address = (self._ip, self._port)
-        # RemoteMonitor.__init__(self, case_id=case_id,
-        #                        params=params, ip=ip, port=port)
         super(RemoteQMPMonitor, self).__init__(case_id=case_id,
                                                params=params, ip=ip, port=port)
         self.qmp_initial(recv_timeout, max_recv_data)
@@ -204,7 +277,7 @@ class RemoteSerialMonitor(RemoteMonitor):
             if re.search(r"login:", allput):
                 break
         if not output and not re.search(r"login:", allput):
-            err_info = 'No prompt \"ligin:\" under %s sec' % timeout
+            err_info = 'No prompt \"login:\" under %s sec' % timeout
             RemoteMonitor.test_error(self, err_info)
 
         cmd = 'root'

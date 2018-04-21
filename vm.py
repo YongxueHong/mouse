@@ -214,8 +214,8 @@ class TestCmd(Test):
         if dst_ip:
             src_cmd_check = 'ssh root@%s ps -axu | grep %s | grep -v grep' \
                             % (dst_ip, self.guest_name)
-            output, _ = self.subprocess_cmd_base(echo_cmd=True,
-                                                 verbose=True, cmd=src_cmd_check)
+            output, _ = self.subprocess_cmd_base(echo_cmd=False,
+                                                 verbose=False, cmd=src_cmd_check)
             if output:
                 pid = re.split(r"\s+", output)[1]
                 info =  'Found a %s dst guest process : pid = %s' \
