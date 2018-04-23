@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 yum_utils_list=(
-pexpect
-python-paramiko
 nc
 bridge-utils
 )
 
 pip_utils_list=(
 pyyaml
+pexpect
+paramiko==2.1.1
 progressbar
 tqdm
+)
+
+easy_install_update_utils_list=(
+pexpect
 )
 
 for utils in ${yum_utils_list[@]}
@@ -46,6 +50,13 @@ do
     pip show $utils
     wait
     echo -e "**************************************************************************"
+done
+
+for utils in ${easy_install_update_utils_list[@]}
+do
+echo -e "\n==========>>>>>>>>>update package "
+easy_install --upgrade $utils
+echo -e "**************************************************************************"
 done
 
 if [ $1 ]
