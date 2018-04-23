@@ -9,11 +9,11 @@ def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
     remote_qmp.sub_step_log('Check the status of migration')
     return query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout)
 
-def query_migration(remote_qmp, interval=3, chk_timeout=1200):
+def query_migration(remote_qmp, interval=5, chk_timeout=1200, recv_timeout=5):
     cmd = '{"execute":"query-migrate"}'
     end_time = time.time() + chk_timeout
     while time.time() < end_time:
-        output = remote_qmp.qmp_cmd_output(cmd=cmd)
+        output = remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=recv_timeout)
         if re.findall(r'"remaining": 0', output):
             return True
         elif re.findall(r'"status": "failed"', output):
