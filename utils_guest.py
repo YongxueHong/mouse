@@ -2,7 +2,10 @@ import re
 import string
 from vm import TestCmd
 import paramiko
-from pexpect import pxssh
+from pexpect import pxssh, TIMEOUT, EOF
+import socket
+import os
+
 
 class GuestSession(TestCmd):
     # Class GuestSession maybe not supported in python3.6
@@ -10,30 +13,38 @@ class GuestSession(TestCmd):
     # for logger "paramiko.transport""
     def __init__(self, ip, case_id, params):
         self._ip = ip
+        self._params = params
         self._passwd = params.get('guest_passwd')
+        super(GuestSession, self).__init__(case_id=case_id, params=params)
+        dir_timestamp = self.params.get('sub_dir_timestamp')
+        sub_log_dir = os.path.join(self.params.get('log_dir'),
+                                   self.case_id + '-'
+                                   + dir_timestamp + '_logs')
+        paramiko.util.log_to_file(os.path.join(sub_log_dir, 'paramiko.log'))
         self._ssh = paramiko.SSHClient()
         self._ssh.load_system_host_keys()
         self._ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._ssh.connect(hostname=ip, port=22, username='root',
-                    timeout=60, password=self._passwd)
-        TestCmd.__init__(self, case_id=case_id, params=params)
+                          timeout=60, password=self._passwd)
 
     def close(self):
-        self._ssh.close()
         TestCmd.test_print(self,
                         'Closed the guest session(%s).' % (self._ip))
+        self._ssh.close()
 
     def __del__(self):
-        self._ssh.close()
         TestCmd.test_print(self,
                         'Closed the guest session(%s).' % (self._ip))
+        self._ssh.close()
 
     def guest_cmd_output(self, cmd, timeout=300):
         output = ''
         errput = ''
         allput = ''
         TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
-        stdin, stdout, stderr = self._ssh.exec_command(command=cmd, timeout=timeout)
+
+        stdin, stdout, stderr = self._ssh.exec_command(command=cmd,
+                                                       timeout=timeout)
         errput = stderr.read()
         output = stdout.read()
         # Here need to remove command echo and blank space again
@@ -78,30 +89,30 @@ class GuestSessionV2(TestCmd):
     # to expected patterns in their output).
     def __init__(self, ip, case_id, params):
         self._ip = ip
+        self._params = params
         self._passwd = params.get('guest_passwd')
         self._cmd = 'ssh root@%s' % self._ip
-        try:
-            self._ssh = pxssh.pxssh()
-            self._ssh.login(server=self._ip, username='root',
-                            password=self._passwd, login_timeout=60)
-        except pxssh.ExceptionPxssh:
-            TestCmd.test_error(self, "SSH failed on login.")
-        TestCmd.__init__(self, case_id=case_id, params=params)
+        super(GuestSessionV2, self).__init__(case_id=case_id, params=params)
+
+        self._ssh = pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+                                         "UserKnownHostsFile": "/dev/null"})
+        self._ssh.login(server=self._ip, username='root', port=22,
+                        password=self._passwd, login_timeout=60)
 
     def close(self):
-        self._ssh.logout()
         TestCmd.test_print(self,
                         'Closed the guest session(%s).' % (self._ip))
+        self._ssh.logout()
 
     def __del__(self):
-        self._ssh.logout()
         TestCmd.test_print(self,
                         'Closed the guest session(%s).' % (self._ip))
+        self._ssh.logout()
 
     def guest_logout(self):
-        self._ssh.logout()
         TestCmd.test_print(self,
                         'Closed the guest session(%s).' % (self._ip))
+        self._ssh.logout()
 
     def guest_cmd_output(self, cmd, timeout=300):
         output = ''
