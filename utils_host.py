@@ -4,14 +4,15 @@ from vm import TestCmd
 import subprocess
 import pexpect
 
+
 class HostSession(TestCmd):
     def __init__(self, case_id, params):
+        self._params = params
         self._guest_name = params.get('vm_cmd_base')['name'][0]
         self._guest_passwd = params.get('guest_passwd')
         self._host_passwd = params.get('host_passwd')
         self._src_ip = params.get('src_host_ip')
-        self._params = params
-        TestCmd.__init__(self, case_id=case_id, params=params)
+        super(HostSession, self).__init__(case_id=case_id, params=params)
 
     def host_cmd(self, cmd, echo_cmd=True, timeout=600):
         if echo_cmd == True:

@@ -11,6 +11,7 @@ class TelnetMonitor(Test):
     def __init__(self, case_id, params, ip, port):
         super(TelnetMonitor, self).__init__(case_id=case_id, params=params)
         self._ip = ip
+        self._params = params
         self._guest_passwd = params.get('guest_passwd')
         self._port = port
         try:
@@ -22,18 +23,20 @@ class TelnetMonitor(Test):
                                  timeout=self.CONNECT_TIMEOUT)
 
     def close(self):
-        self._telnet_client.close()
         Test.test_print(self,
                         'Closed the telent(%s:%s).' % (self._ip, self._port))
+        self._telnet_client.close()
 
     def __del__(self):
-        self._telnet_client.close()
         Test.test_print(self,
                         'Closed the telent(%s:%s).' % (self._ip, self._port))
+        self._telnet_client.close()
+
 
 class TelnetSerial(TelnetMonitor):
     def __init__(self, case_id, params, ip, port):
         super(TelnetSerial, self).__init__(case_id, params, ip, port)
+        self._params = params
         self._login_timeout = 300
         self._passwd_timeout = 5
         self._shell_timeout = 5
@@ -85,6 +88,7 @@ class RemoteMonitor(Test):
     def __init__(self, case_id, params, ip, port):
         super(RemoteMonitor, self).__init__(case_id=case_id, params=params)
         self._ip = ip
+        self._params = params
         self._qmp_port = int(params.get('qmp_port'))
         self._serial_port = int(params.get('serial_port'))
         self._guest_passwd = params.get('guest_passwd')
@@ -100,15 +104,15 @@ class RemoteMonitor(Test):
             Test.test_error(self, 'Fail to connect to monitor(%s:%s).'
                             % (ip, port))
 
-    def __del__(self):
-        self._socket.close()
-        Test.test_print(self,
-                        'Closed the monitor(%s:%s).' % (self._ip, self._port))
-
     def close(self):
-        self._socket.close()
         Test.test_print(self,
                         'Closed the monitor(%s:%s).' % (self._ip, self._port))
+        self._socket.close()
+
+    def __del__(self):
+        Test.test_print(self,
+                        'Closed the monitor(%s:%s).' % (self._ip, self._port))
+        self._socket.close()
 
     def data_availabl(self, timeout=DATA_AVAILABLE_TIMEOUT):
         try:
@@ -157,6 +161,7 @@ class RemoteMonitor(Test):
             output = "\n".join(lines)
         return output
 
+
 class RemoteQMPMonitor(RemoteMonitor):
     QMO_INIT_TIMEOUT = 0.1
     QMP_CMD_TIMEOUT = 1.0
@@ -165,6 +170,7 @@ class RemoteQMPMonitor(RemoteMonitor):
                  max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA):
         self._ip = ip
         self._port = port
+        self._params = params
         self._address = (self._ip, self._port)
         super(RemoteQMPMonitor, self).__init__(case_id=case_id,
                                                params=params, ip=ip, port=port)
@@ -206,6 +212,7 @@ class RemoteQMPMonitor(RemoteMonitor):
             if verbose == True:
                 RemoteMonitor.test_print(self, output)
         return output
+
 
 class RemoteSerialMonitor(RemoteMonitor):
     SERIAL_CMD_TIMEOUT = 1.0
