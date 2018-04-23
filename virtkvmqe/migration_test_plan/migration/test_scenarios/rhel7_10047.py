@@ -20,7 +20,7 @@ def run_case(params):
     test.main_step_log('1. Boot guest with N vcpu and M (GB) memory on the src'
                        ' host. (N=host physical cpu number, '
                        'M=host physical memory number)')
-    mem_cmd = "free -h | grep Mem | awk '{print $2}' |sed 's/G//g'"
+    mem_cmd = "free -h | grep Mem | awk '{print $4}' |sed 's/G//g'"
     mem_cmd_remote = "ssh root@%s %s" % (dst_host_ip, mem_cmd)
     if (guest_arch == 'ppc64le'):
         cpu_cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
@@ -106,7 +106,10 @@ def run_case(params):
         dst_serial.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('4.5 Shutdown guest')
-    dst_serial.serial_shutdown_vm()
+    dst_guest_session.guest_cmd_output('shutdown -h now')
+    output = dst_serial.serial_output()
+    if re.findall(r'Call Trace:', output):
+        test.test_error('Guest hit call trace')
 
     src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')

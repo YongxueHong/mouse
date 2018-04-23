@@ -271,6 +271,9 @@ def run_case(params):
     else:
         test.test_print('Install successfully.')
 
+    time.sleep(3)
+    host_session.check_guest_process(src_ip=src_host_ip)
+
     params.vm_base_cmd_del('drive',
                            'id=drive_cd1,if=none,snapshot=off,aio=threads,'
                            'cache=none,media=cdrom,file=%s' % iso_name)
