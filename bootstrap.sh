@@ -16,6 +16,13 @@ easy_install_update_utils_list=(
 pexpect
 )
 
+echo -e "\n==========>>>>>>>>>Installing package pip "
+echo -e "**************************************************************************"
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+wait
+echo -e "**************************************************************************"
+
 for utils in ${yum_utils_list[@]}
 do
     echo -e "\n==========>>>>>>>>>Installing package $utils "
