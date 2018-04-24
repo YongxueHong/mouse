@@ -101,8 +101,3 @@ def run_case(params):
         dst_serial.test_error('Ping failed')
 
     test.sub_step_log('5.5 Shutdown guest')
-    dst_serial.serial_shutdown_vm()
-
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
-    if output:
-        src_remote_qmp.test_error('Failed to quit qemu on src end')

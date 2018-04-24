@@ -386,15 +386,5 @@ def run_case(params):
         test.test_error('Value of md5sum error!')
 
     test.sub_step_log('4.6 quit qemu on src end and shutdown vm on dst end')
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}',
-                                           recv_timeout=3)
-    if output:
-        src_remote_qmp.test_error('Failed to quit qemu on src host')
-
-    dst_guest_session.guest_cmd_output('shutdown -h now')
-    output = dst_serial.serial_output()
-    if re.findall(r'Call Trace:', output):
-        test.test_error('Guest hit call trace')
-
 
 

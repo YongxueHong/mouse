@@ -1,4 +1,3 @@
-import time
 from utils_host import HostSession
 from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
@@ -92,8 +91,3 @@ def run_case(params):
         test.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('4.4. Shutdown guest.')
-    dst_serial.serial_shutdown_vm()
-
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
-    if output:
-        src_remote_qmp.test_error('Failed to quit qemu on src end')
