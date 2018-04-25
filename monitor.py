@@ -24,12 +24,12 @@ class TelnetMonitor(Test):
 
     def close(self):
         Test.test_print(self,
-                        'Closed the telent(%s:%s).' % (self._ip, self._port))
+                        'Closed the telnet(%s:%s).' % (self._ip, self._port))
         self._telnet_client.close()
 
     def __del__(self):
         Test.test_print(self,
-                        'Closed the telent(%s:%s).' % (self._ip, self._port))
+                        'Closed the telnet(%s:%s).' % (self._ip, self._port))
         self._telnet_client.close()
 
 
@@ -85,48 +85,82 @@ class RemoteMonitor(Test):
     DATA_AVAILABLE_TIMEOUT = 0.1
     MAX_RECEIVE_DATA = 1024
 
-    def __init__(self, case_id, params, ip, port):
+    def __init__(self, case_id, params, ip=None, port=None, filename=None):
         super(RemoteMonitor, self).__init__(case_id=case_id, params=params)
-        self._ip = ip
-        self._params = params
-        self._qmp_port = int(params.get('qmp_port'))
-        self._serial_port = int(params.get('serial_port'))
-        self._guest_passwd = params.get('guest_passwd')
-        self._port = port
-        self.address = (ip, port)
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if ip and port and not filename:
+            self._ip = ip
+            self._port = port
+            self._address = (ip, port)
+            self._filename = None
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        elif filename and not ip and not port:
+            self._filename = filename
+            self._ip = None
+            self._port = None
+            self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        else:
+            Test.test_error(self, 'Initialize monitor with invalid arguments.')
         self._socket.settimeout(self.CONNECT_TIMEOUT)
         try:
-            self._socket.connect(self.address)
-            Test.test_print(self, 'Connect to monitor(%s:%s) successfully.'
-                            % (ip, port))
+            if self._ip and self._port and not self._filename:
+                self._socket.connect(self._address)
+                Test.test_print(self, 'Connect to monitor(%s:%s) successfully.'
+                                % (self._ip, self._port))
+            elif self._filename and not self._ip and not self._port:
+                self._socket.connect(self._filename)
+                Test.test_print(self, 'Connect to monitor(%s) successfully.'
+                                % self._filename)
         except socket.error:
-            Test.test_error(self, 'Fail to connect to monitor(%s:%s).'
-                            % (ip, port))
+            if self._ip and self._port and not self._filename:
+                Test.test_error(self, 'Fail to connect to monitor(%s:%s).'
+                                % (self._ip, self._port))
+            elif self._filename and not self._ip and not self._port:
+                Test.test_error(self, 'Fail to connect to monitor(%s).'
+                                % self._filename)
 
     def close(self):
-        Test.test_print(self,
-                        'Closed the monitor(%s:%s).' % (self._ip, self._port))
+        if self._ip and self._port and not self._filename:
+            Test.test_print(self,
+                            'Closed the monitor(%s:%s).'
+                            % (self._ip, self._port))
+        elif self._filename and not self._ip and not self._port:
+            Test.test_print(self,
+                            'Closed the monitor(%s).'
+                            % self._filename)
         self._socket.close()
 
     def __del__(self):
-        Test.test_print(self,
-                        'Closed the monitor(%s:%s).' % (self._ip, self._port))
+        if self._ip and self._port and not self._filename:
+            Test.test_print(self,
+                            'Closed the monitor(%s:%s).'
+                            % (self._ip, self._port))
+        elif self._filename and not self._ip and not self._port:
+            Test.test_print(self,
+                            'Closed the monitor(%s).'
+                            % self._filename)
         self._socket.close()
 
     def data_availabl(self, timeout=DATA_AVAILABLE_TIMEOUT):
         try:
             return bool(select.select([self._socket], [], [], timeout)[0])
         except socket.error:
-            Test.test_error(self, 'Verifying data on monitor(%s:%s) socket.'
-                            % (self._ip, self._port))
+            if self._ip and self._port and not self._filename:
+                Test.test_error(self, 'Verifying data on monitor(%s:%s) socket.'
+                                % (self._ip, self._port))
+            elif self._filename and not self._ip and not self._port:
+                Test.test_error(self, 'Verifying data on monitor(%s) socket.'
+                                % self._filename)
 
     def send_cmd(self, cmd):
         try:
             self._socket.sendall(cmd + '\n')
         except socket.error:
-            Test.test_error(self, 'Fail to send command to monitor(%s:%s).'
-                            % (self._ip, self._port))
+            if self._ip and self._port and not self._filename:
+                Test.test_error(self, 'Fail to send command to monitor(%s:%s).'
+                                % (self._ip, self._port))
+            elif self._filename and not self._ip and not self._port:
+                Test.test_error(self, 'Fail to send command to monitor(%s:%s).'
+                                % self._filename)
 
     def rec_data(self, recv_timeout=DATA_AVAILABLE_TIMEOUT,
                  max_recv_data=MAX_RECEIVE_DATA, search_str=None):
@@ -137,8 +171,12 @@ class RemoteMonitor(Test):
             try:
                 data = self._socket.recv(max_recv_data)
             except socket.error:
-                Test.test_error(self, 'Fail to receive data from monitor(%s:%s).'
-                                % (self._ip, self._port))
+                if self._ip and self._port and not self._filename:
+                    Test.test_error(self, 'Fail to receive data from monitor(%s:%s).'
+                                    % (self._ip, self._port))
+                elif self._filename and not self._ip and not self._port:
+                    Test.test_error(self, 'Fail to receive data from monitor(%s:%s).'
+                                    % self._filename)
             if not data:
                 break
             alldata = alldata + data
@@ -165,15 +203,21 @@ class RemoteMonitor(Test):
 class RemoteQMPMonitor(RemoteMonitor):
     QMO_INIT_TIMEOUT = 0.1
     QMP_CMD_TIMEOUT = 1.0
-    def __init__(self, case_id, params, ip, port,
+    def __init__(self, case_id, params, ip=None, port=None, filename=None,
                  recv_timeout=QMO_INIT_TIMEOUT,
                  max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA):
-        self._ip = ip
-        self._port = port
         self._params = params
-        self._address = (self._ip, self._port)
-        super(RemoteQMPMonitor, self).__init__(case_id=case_id,
-                                               params=params, ip=ip, port=port)
+        if ip and port and not filename:
+            super(RemoteQMPMonitor, self).__init__(case_id=case_id,
+                                                   params=params,
+                                                   ip=ip, port=port)
+        elif filename and not ip and not port:
+            super(RemoteQMPMonitor, self).__init__(case_id=case_id,
+                                                   params=params,
+                                                   filename=filename)
+        else:
+            RemoteMonitor.test_error(self,
+                                     'Initialize qmp monitor with invalid arguments.')
         self.qmp_initial(recv_timeout, max_recv_data)
 
     def qmp_initial(self, recv_timeout, max_recv_data):
@@ -216,13 +260,18 @@ class RemoteQMPMonitor(RemoteMonitor):
 
 class RemoteSerialMonitor(RemoteMonitor):
     SERIAL_CMD_TIMEOUT = 1.0
-    def __init__(self, case_id, params, ip, port):
-        self._ip = ip
-        self._port = port
-        self._parmas = params
+    def __init__(self, case_id, params, ip=None, port=None, filename=None):
+        self._params = params
         self._guest_passwd = params.get('guest_passwd')
-        super(RemoteSerialMonitor, self).__init__(case_id=case_id,
-                                               params=params, ip=ip, port=port)
+        if ip and port and not filename:
+            super(RemoteSerialMonitor, self).__init__(case_id=case_id,
+                                                   params=params, ip=ip, port=port)
+        elif filename and not ip and not port:
+            super(RemoteSerialMonitor, self).__init__(case_id=case_id,
+                                                   params=params, filename=filename)
+        else:
+            RemoteMonitor.test_error(self,
+                                     'Initialize serial monitor with invalid arguments.')
 
     def prompt_password(self, output, recv_timeout=1,
                         max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
