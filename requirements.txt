@@ -1,0 +1,5 @@
+paramiko==2.1.1
+pexpect==4.5.0
+PyYAML==3.12
+progressbar==2.3
+tqdm==4.19.6
