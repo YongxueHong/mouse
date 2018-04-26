@@ -7,6 +7,7 @@ import threading
 import re
 import select
 
+
 class Test(object):
     def __init__(self, case_id, params):
         self.case_id = case_id
@@ -69,8 +70,6 @@ class Test(object):
                            serial_debug=serial_debug)
 
     def test_error(self, err_info):
-        info = 'Case Error: ' + err_info
-        self.test_print(info=info)
         raise usr_exceptions.Error(err_info)
 
     def main_step_log(self, log):
@@ -206,7 +205,7 @@ class TestCmd(Test):
             output = "\n".join(lines)
         return output
 
-    def check_guest_process(self, src_ip=None, dst_ip=None):
+    def check_guest_process(self, kill_pid=True, src_ip=None, dst_ip=None):
         pid_list = []
         dst_pid_list = []
         output = ''
@@ -220,7 +219,8 @@ class TestCmd(Test):
                 info =  'Found a %s dst guest process : pid = %s' \
                         % (self.guest_name, pid)
                 Test.test_print(self, info)
-                self.kill_dst_guest_process(dst_ip, pid)
+                if kill_pid == True:
+                    self.kill_dst_guest_process(dst_ip, pid)
             else:
                 info = 'No found %s dst guest process' % self.guest_name
                 Test.test_print(self, info)
@@ -232,7 +232,8 @@ class TestCmd(Test):
                 pid = re.split(r"\s+", output)[1]
                 info =  'Found a %s guest process : pid = %s' % (self.guest_name, pid)
                 Test.test_print(self, info)
-                self.kill_guest_process(pid)
+                if kill_pid == True:
+                    self.kill_guest_process(pid)
             else:
                 info = 'No found %s guest process' % self.guest_name
                 Test.test_print(self, info)
@@ -240,14 +241,14 @@ class TestCmd(Test):
     def kill_guest_process(self, pid):
         cmd = 'kill -9 %s' % pid
         self.subprocess_cmd_base(cmd=cmd, enable_output=False)
-        time.sleep(1.5)
+        time.sleep(3)
         # Check pid until killed completely.
         self.check_guest_process()
 
     def kill_dst_guest_process(self, dst_ip, pid):
         cmd = 'ssh root@%s kill -9 %s' %(dst_ip, pid)
         self.subprocess_cmd_base(cmd=cmd, enable_output=False)
-        time.sleep(1.5)
+        time.sleep(3)
         # Check pid until killed completely.
         self.check_guest_process()
 

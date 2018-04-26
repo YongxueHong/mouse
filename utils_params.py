@@ -105,6 +105,14 @@ class Params(object):
             err_info = 'Error: No such option: %s' % option
             raise Error(err_info)
 
+    def add_daemon_monitor(self):
+        self.vm_base_cmd_add('chardev',
+                             'socket,id=daemon_qmp_monitor,'
+                             'host=%s,port=%s,server,nowait'
+                             % (self._params.get('src_host_ip'),
+                                self._params.get('daemon_qmp_port')))
+        self.vm_base_cmd_add('mon', 'chardev=daemon_qmp_monitor,mode=control')
+
     def create_qemu_cmd(self):
         cmd_line = ''
         cmd_line_script = ''
