@@ -4,6 +4,11 @@ import os
 import sys
 import time
 import traceback
+import platform
+import usr_exceptions
+import gc
+from monitor import RemoteQMPMonitor, RemoteSerialMonitor
+
 
 class Status:
     PASS = "\033[92mPASS\033[00m"
@@ -14,6 +19,7 @@ class Status:
     WARNINGYELLOW = '\033[93m'
     FAILRED = '\033[91m'
     ENDC = '\033[5m'
+
 
 class CaseRunner(object):
     def __init__(self, params):
@@ -33,7 +39,7 @@ class CaseRunner(object):
         self.get_case_list()
         self._run_result['TOTAL'] = len(self._case_list)
 
-    def timeout_log_file(self, case):
+    def runner_log_file(self, case, log_info):
         log_file_list = []
         test_log_dir = os.path.join(self._params.get('log_dir'),
                                     case + '-'
@@ -43,19 +49,13 @@ class CaseRunner(object):
         log_file_list.append(log)
         log = test_log_dir + '/' + 'short_debug.log'
         log_file_list.append(log)
-        timeout_info = 'Failed to run %s under %s sec.' \
-                       % (case, self._params.get('timeout'))
+        if self._params.get('verbose') == 'yes':
+            print(log_info)
         for log in log_file_list:
             if os.path.exists(log):
-                if self._params.get('verbose') == 'no':
-                    with open(log, "a") as run_log:
-                        timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
-                        run_log.write("%s: %s\n" % (timestamp, timeout_info))
-                if self._params.get('verbose') == 'yes':
-                    with open(log, "a") as run_log:
-                        timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
-                        run_log.write("%s: %s\n" % (timestamp, timeout_info))
-                    print (timeout_info)
+                with open(log, "a") as run_log:
+                    timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
+                    run_log.write("%s: %s\n" % (timestamp, log_info))
 
     def display_process_bar(self, processor, start_time):
         sys.stdout.write(' ')
@@ -117,10 +117,79 @@ class CaseRunner(object):
         print ('==>TEST LOG : %s ' % (self._params.get('log_dir')))
         print ('\033[93m%s\033[00m' % ('*' * 94))
 
+    def shutdown_quit_vm(self, case, timeout=300):
+        try:
+            self.runner_log_file(case,
+                                 '==== Finally: Try to shutdown guest. ====')
+            self._src_qmp = RemoteQMPMonitor(case, self._params,
+                                       self._params.get('src_host_ip'),
+                                       int(self._params.get('qmp_port')))
+
+            self._src_serial = RemoteSerialMonitor(case, self._params,
+                                                   self._params.get('src_host_ip'),
+                                                   int(self._params.get('serial_port')))
+        except:
+            self.runner_log_file(case,
+                                 '---- Guest powered off.----')
+
+        else:
+            status = self._src_qmp.qmp_cmd_output('{"execute":"query-status"}',
+                                            echo_cmd=False, verbose=False)
+            if '\"status\": \"paused\"' in status \
+                    or '\"status\": \"io-error\"' in status \
+                    or '\"status\": \"restore-vm\"' in status:
+                self._src_qmp.qmp_cmd_output('{"execute":"cont"}')
+                try:
+                    self._src_serial.serial_shutdown_vm()
+                except:
+                    self._src_qmp.qmp_system_powerdown(timeout=timeout)
+            elif '\"status\": \"running\"' in status:
+                try:
+                    self._src_serial.serial_shutdown_vm()
+                except:
+                    self._src_qmp.qmp_system_powerdown(timeout=timeout)
+            else:
+                self._src_qmp.qmp_quit()
+        if self._params.get('dst_host_ip'):
+            self.runner_log_file(case,
+                                 '==== Finally: Try to shutdown dst guest. ====')
+            try:
+                self._dst_qmp = RemoteQMPMonitor(case, self._params,
+                                           self._params.get('dst_host_ip'),
+                                           int(self._params.get('qmp_port')))
+                self._dst_serial = RemoteSerialMonitor(case, self._params,
+                                                       self._params.get(
+                                                           'dst_host_ip'),
+                                                       int(self._params.get(
+                                                           'serial_port')))
+            except:
+                self.runner_log_file(case,
+                                     '---- Dst guest powered off.----')
+
+            else:
+                status = self._dst_qmp.qmp_cmd_output('{"execute":"query-status"}',
+                                                echo_cmd=False, verbose=False)
+                if '\"status\": \"paused\"' in status \
+                        or '\"status\": \"io-error\"' in status \
+                        or '\"status\": \"restore-vm\"' in status:
+                    self._dst_qmp.qmp_cmd_output('{"execute":"cont"}')
+                    try:
+                        self._dst_serial.serial_shutdown_vm()
+                    except:
+                        self._dst_qmp.qmp_system_powerdown(timeout=timeout)
+                elif '\"status\": \"running\"' in status:
+                    try:
+                        self._dst_serial.serial_shutdown_vm()
+                    except:
+                        self._dst_qmp.qmp_system_powerdown(timeout=timeout)
+                else:
+                    self._dst_qmp.qmp_quit()
+
     def _run(self, case, case_queue):
         log_file_list = []
         try:
             getattr(self._case_dict[case], "run_case")(self._params)
+            self.shutdown_quit_vm(case)
         except KeyboardInterrupt:
             raise
         except :
@@ -136,7 +205,8 @@ class CaseRunner(object):
             log_file_list.append(log_file)
             for log_file in log_file_list:
                 if os.path.exists(log_file):
-                    traceback.print_exc(file=open(log_file, "a"))
+                    with open(log_file, "a") as trace_log:
+                        traceback.print_exc(file=trace_log)
             case_queue.put(case)
 
     def main_run(self):
@@ -171,16 +241,28 @@ class CaseRunner(object):
             self._sub_run_time = self._sub_end_time - self._sub_start_time
             self._case_time = "%s min %s sec" % (int(self._sub_run_time / 60),
                                            int(self._sub_run_time -
-                                               int(self._sub_run_time / 60) * 60))
+                                                   int(self._sub_run_time / 60) * 60))
+
             if float(self._sub_run_time) > float(int(self._params.get('timeout'))):
                 sub_proc.terminate()
                 self._run_result['error_cases'].append(case)
                 self._run_result['case_time'][case] = self._case_time
-                self.timeout_log_file(case)
+                self._timeout_info = 'Failed to run %s under %s sec.' \
+                               % (case, self._params.get('timeout'))
+                self.runner_log_file(case, self._timeout_info)
+                try:
+                    self.shutdown_quit_vm(case)
+                except:
+                    pass
 
             if not case_queue.empty():
                 self._run_result['error_cases'].append(case_queue.get())
                 self._run_result['case_time'][case] = self._case_time
+                # Need to clear vm since not call __del__ after raise error.
+                try:
+                    self.shutdown_quit_vm(case)
+                except:
+                    pass
             else:
                 self._run_result['pass_cases'].append(case)
                 self._run_result['case_time'][case] = self._case_time

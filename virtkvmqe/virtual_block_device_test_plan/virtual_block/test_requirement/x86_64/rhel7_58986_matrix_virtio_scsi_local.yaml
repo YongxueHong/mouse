@@ -6,8 +6,8 @@ iso_name: 'RHEL-7.5'
 install_timeout: '4800'
 
 nfs_server:
- - '10.73.194.27:/vol/s2kvmauto/iso'
- - '10.12.0.20:/srv/kvmqe/isos'
+ - 'xxx.xxx.xxx.xxx:/vol/s2kvmauto/iso'
+ - 'xxx.xxx.xxx.xxx:/srv/kvmqe/isos'
 
 rtt_tolerance: '150'
 
@@ -58,10 +58,10 @@ vm_cmd_base:
  vga:
   - 'std'
  chardev:
-  - 'socket,id=qmp_id_qmpmonitor1,path=/var/tmp/monitor-qmpmonitor1,server,nowait'
+  - 'socket,id=qmp_id_qmpmonitor,path=/var/tmp/monitor-qmpmonitor,server,nowait'
   - 'socket,id=qmp_id_catch_monitor,path=/var/tmp/monitor-catch_monitor,server,nowait'
  mon:
-  - 'chardev=qmp_id_qmpmonitor1,mode=control'
+  - 'chardev=qmp_id_qmpmonitor,mode=control'
   - 'chardev=qmp_id_catch_monitor,mode=control'
  device:
   - 'nec-usb-xhci,id=usb1,bus=pci.0,addr=0x3'

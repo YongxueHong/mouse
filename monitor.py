@@ -257,6 +257,29 @@ class RemoteQMPMonitor(RemoteMonitor):
                 RemoteMonitor.test_print(self, output)
         return output
 
+    def qmp_system_powerdown(self, recv_timeout=3, max_recv_data=1024, timeout=300):
+        deadline = time.time() + timeout
+        output = ''
+        downed = False
+        self.qmp_cmd_output('{ "execute": "system_powerdown" }')
+        while time.time() < deadline:
+            output = output + RemoteMonitor.rec_data(self,
+                                                     recv_timeout=recv_timeout,
+                                                     max_recv_data=max_recv_data)
+            RemoteMonitor.test_print(self, output)
+            if 'SHUTDOWN' in output:
+                downed = True
+                break
+        if downed == False:
+            RemoteMonitor.test_error(self,
+                                     'Failed to power down guest under %s sec.'
+                                     % timeout)
+
+    def qmp_quit(self):
+        cmd = '{ "execute": "quit" }'
+        RemoteQMPMonitor.test_print(self, cmd)
+        RemoteQMPMonitor.send_cmd(self, cmd)
+
 
 class RemoteSerialMonitor(RemoteMonitor):
     SERIAL_CMD_TIMEOUT = 1.0
