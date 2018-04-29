@@ -7,8 +7,8 @@ image_size: '20G'
 iso_name: 'RHEL-7.5'
 
 nfs_server:
- - '10.73.194.27:/vol/s2kvmauto/iso'
- - '10.12.0.20:/srv/kvmqe/isos'
+ - 'xxx.xxx.xxx.xxx:/vol/s2kvmauto/iso'
+ - 'xxx.xxx.xxx.xxx:/srv/kvmqe/isos'
 
 rtt_tolerance: '150'
 
