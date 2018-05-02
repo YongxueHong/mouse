@@ -37,11 +37,12 @@ class GuestSession(TestCmd):
                         'Closed the guest session(%s).' % (self._ip))
         self._ssh.close()
 
-    def guest_cmd_output(self, cmd, timeout=300):
+    def guest_cmd_output(self, cmd, verbose=True, timeout=300):
         output = ''
         errput = ''
         allput = ''
-        TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
+        if verbose:
+            TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
 
         stdin, stdout, stderr = self._ssh.exec_command(command=cmd,
                                                        timeout=timeout)
@@ -49,25 +50,38 @@ class GuestSession(TestCmd):
         output = stdout.read()
         # Here need to remove command echo and blank space again
         output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
-
-        if errput:
-            TestCmd.test_print(self, errput)
-        if output:
-            TestCmd.test_print(self, output)
+        if verbose:
+            if errput:
+                TestCmd.test_print(self, errput)
+            if output:
+                TestCmd.test_print(self, output)
         allput = errput + output
         if re.findall(r'command not found', allput) or re.findall(r'-bash', allput):
             TestCmd.test_error(self, 'Command %s failed' % cmd)
         return allput
 
-    def guest_system_dev(self, enable_output=True):
+    def guest_system_dev(self, verbose=True):
         cmd = 'ls /dev/[svh]d*'
-        output = self.guest_cmd_output(cmd)
+        output = self.guest_cmd_output(cmd, verbose)
         system_dev = re.findall('/dev/[svh]d\w+\d+', output)[0]
         system_dev = system_dev.rstrip(string.digits)
-        if enable_output == True:
+        if verbose:
             info = 'system device : %s' % system_dev
             TestCmd.test_print(self, info=info)
         return system_dev, output
+
+    def get_data_disk(self, verbose=True):
+        data_disk = []
+        cmd = 'ls /dev/[svh]d*'
+        output = self.guest_cmd_output(cmd, verbose=True)
+        sys_dev, _ = self.guest_system_dev(verbose=False)
+        for dev in output.split('\n'):
+            if sys_dev not in dev:
+                data_disk.append(dev)
+        if verbose:
+            info = 'data disk : %s' % data_disk
+            TestCmd.test_print(self, info=info)
+        return data_disk
 
     def guest_ping_test(self, dst_ip, count):
         cmd_ping = 'ping %s -c %d' % (dst_ip, count)
@@ -81,6 +95,23 @@ class GuestSession(TestCmd):
         if re.findall(r'Call Trace:', output):
             TestCmd.test_error(self, 'Guest hit call trace')
 
+    def guest_get_disk_size(self, dev, verbose=True):
+        return self.guest_cmd_output(
+            'lsblk -s %s | sed -n \'2p\' | awk {\'print $4\'}' % dev, verbose)
+
+    def guest_create_parts(self, dev, num, fs_type='xfs', verbose=True):
+        self.guest_cmd_output(cmd='parted %s -s mklabel gpt'
+                                  % dev, verbose=verbose)
+        dev_size = re.findall(r"\d+\.?\d*", self.guest_get_disk_size(dev))[0]
+        offset_size = (int(dev_size) / num) * 1024
+        start = 1
+        end = offset_size
+        for i in range(0, num):
+            self.guest_cmd_output('parted %s -s mkpart primary %s %sMB %sMB'
+                                  % (dev, fs_type, start, end), verbose)
+            start = end
+            end = start + offset_size
+        self.guest_cmd_output('parted %s -s p' % dev)
 
 class GuestSessionV2(TestCmd):
     # Class GuestSessionV2 is supported python2 and python3.
