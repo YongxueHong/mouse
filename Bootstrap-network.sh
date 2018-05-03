@@ -56,7 +56,7 @@ BOOTPROTO=dhcp
 ONBOOT=yes
 TYPE=Bridge" >>/etc/sysconfig/network-scripts/ifcfg-br0
     _log_info "Restart the network service."
-    _exec_cmd "systemctl restart network.service"
+    _exec_cmd "service network restart"
 else
     _usage
 fi
