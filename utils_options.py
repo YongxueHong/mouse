@@ -47,6 +47,8 @@ help_info = "Usage: \n" \
             "               Run given image format for case. \n" \
             "--drive_format=virtio-scsi|virtio-blk \n" \
             "               Run given drive format for case. \n" \
+            "--share_images_dir=$images dir \n" \
+            "               Run given share images directory for migration case. \n" \
             "--local_images_dir=$images dir \n" \
             "               Run given images directory for case. \n" \
             "--image1_name=$image name \n" \
@@ -123,6 +125,8 @@ class Options(object):
                     opt_dict[opt] = val
                 elif opt == "--drive_format":
                     opt_dict[opt] = val
+                elif opt == "--share_images_dir":
+                    opt_dict[opt] = val
                 elif opt == "--local_images_dir":
                     opt_dict[opt] = val
                 elif opt == "--image1_name":
@@ -148,6 +152,8 @@ class Options(object):
                 params.get('image_format', v)
             if k == '--drive_format':
                 params.get('drive_format', v)
+            if k == '--share_images_dir':
+                params.get('share_images_dir', v)
             if k == '--local_images_dir':
                 params.get('local_images_dir', v)
             if k == '--image1_name':
