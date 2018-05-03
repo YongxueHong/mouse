@@ -26,6 +26,7 @@ if __name__ == "__main__":
     params.get('log_dir', log_dir)
 
     options.set_pramas(params)
+    params.convert_variables()
 
     runner = runner.CaseRunner(params)
     runner.main_run()

@@ -19,7 +19,9 @@ options_list = [
     "dst_host_ip=",
     "image_format=",
     "drive_format=",
-    "share_images_dir="
+    "share_images_dir=",
+    "local_images_dir=",
+    "image1_name="
 ]
 
 help_info = "Usage: \n" \
@@ -37,6 +39,18 @@ help_info = "Usage: \n" \
             "               Display the log of running. \n" \
             "--repeat_times=$times \n" \
             "               Run given cases with $times. \n" \
+            "--src_host_ip=$ip addr \n" \
+            "               Run given host for case. \n" \
+            "--dst_host_ip=$ip addr \n" \
+            "               Run given destination host for case. \n" \
+            "--image_format=qcow2|raw \n" \
+            "               Run given image format for case. \n" \
+            "--drive_format=virtio-scsi|virtio-blk \n" \
+            "               Run given drive format for case. \n" \
+            "--local_images_dir=$images dir \n" \
+            "               Run given images directory for case. \n" \
+            "--image1_name=$image name \n" \
+            "               Run given system images for guest. \n" \
             "Please see README for more information."
 
 class Options(object):
@@ -73,7 +87,8 @@ class Options(object):
         print ("%s" % help_info)
 
     def has_key(self, key):
-        return self.options.has_key(key)
+        # Python 2 and 3
+        return  key in self.options
 
     def initial_options(self):
         opt_dict = {}
@@ -100,6 +115,18 @@ class Options(object):
                     opt_dict[opt] = val
                 elif opt == "--repeat_times":
                     opt_dict[opt] = val
+                elif opt == "--src_host_ip":
+                    opt_dict[opt] = val
+                elif opt == "--dst_host_ip":
+                    opt_dict[opt] = val
+                elif opt == "--image_format":
+                    opt_dict[opt] = val
+                elif opt == "--drive_format":
+                    opt_dict[opt] = val
+                elif opt == "--local_images_dir":
+                    opt_dict[opt] = val
+                elif opt == "--image1_name":
+                    opt_dict[opt] = val
 
         except getopt.GetoptError:
             print("Please Check the command again.")
@@ -113,3 +140,16 @@ class Options(object):
                 params.get('verbose', v)
             if k == '--repeat_times':
                 params.get('repeat_times', v)
+            if k == '--src_host_ip':
+                params.get('src_host_ip', v)
+            if k == '--dst_host_ip':
+                params.get('dst_host_ip', v)
+            if k == '--image_format':
+                params.get('image_format', v)
+            if k == '--drive_format':
+                params.get('drive_format', v)
+            if k == '--local_images_dir':
+                params.get('local_images_dir', v)
+            if k == '--image1_name':
+                params.get('image1_name', v)
+

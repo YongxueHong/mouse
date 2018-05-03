@@ -13,7 +13,6 @@ class Params(object):
         self._case_list = case_list
         self._params = {}
         self.build_dict_from_yaml()
-        self.convert_variables()
         if self._case_list:
             self.find_case_from_yaml()
 
