@@ -254,6 +254,10 @@ class CaseRunner(object):
                     self.shutdown_quit_vm(case)
                 except:
                     pass
+                self._error_info = '\n' + '===> ERROR: %s - %s ' \
+                                  % (case.upper().replace('_', '-'),
+                                     self._params.get('test_cases')[case]['name'])
+                self.runner_log_file(case, self._error_info)
 
             if not case_queue.empty():
                 self._run_result['error_cases'].append(case_queue.get())
@@ -263,9 +267,17 @@ class CaseRunner(object):
                     self.shutdown_quit_vm(case)
                 except:
                     pass
+                self._error_info = '\n' + '===> ERROR: %s - %s ' \
+                                  % (case.upper().replace('_', '-'),
+                                     self._params.get('test_cases')[case]['name'])
+                self.runner_log_file(case, self._error_info)
             else:
                 self._run_result['pass_cases'].append(case)
                 self._run_result['case_time'][case] = self._case_time
+                self._pass_info = '\n' + '===> PASS: %s - %s ' \
+                                  % (case.upper().replace('_', '-'),
+                                     self._params.get('test_cases')[case]['name'])
+                self.runner_log_file(case, self._pass_info)
 
             if self._params.get('verbose') == 'no':
                 sys.stdout.write('\b')
