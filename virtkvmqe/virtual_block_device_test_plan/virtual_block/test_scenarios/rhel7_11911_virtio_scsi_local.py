@@ -17,7 +17,7 @@ def run_case(params):
     qmp_port = int(params.get('qmp_port'))
     serial_port = int(params.get('serial_port'))
 
-    test = CreateTest(case_id='rhel_114178_virtio_scsi_local', params=params)
+    test = CreateTest(case_id='rhel7_11911_virtio_scsi_local', params=params)
     id = test.get_id()
     host_session = HostSession(id, params)
     test.main_step_log('1. prepare a installed guest.')
