@@ -106,6 +106,8 @@ test_cases:
   name: "[virtual block] blockdev backing file"
  rhel7_11911_virtio_scsi_local:
   name: "[virtual block] dd test one disk with different block size - rhel only"
+ rhel7_11947_virtio_scsi_local:
+  name: "[virtual block] block.cache.writeback/writethrough with I/O + poweroff"
 
 
 # Set repeat times.
