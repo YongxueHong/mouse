@@ -20,7 +20,7 @@ def run_case(params):
     test.main_step_log('1. Boot guest with N vcpu and M (GB) memory on the src'
                        ' host. (N=host physical cpu number, '
                        'M=host physical memory number)')
-    mem_cmd = "free -h | grep Mem | awk '{print $4}' |sed 's/G//g'"
+    mem_cmd = "free -h | grep Mem | awk '{print $4}' |sed 's/[G,T]//g'"
     mem_cmd_remote = "ssh root@%s %s" % (dst_host_ip, mem_cmd)
     if (guest_arch == 'ppc64le'):
         cpu_cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
