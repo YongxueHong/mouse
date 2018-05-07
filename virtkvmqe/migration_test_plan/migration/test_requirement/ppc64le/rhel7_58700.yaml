@@ -5,9 +5,12 @@ image_size: '20G'
 iso_name: 'RHEL-7.5'
 install_timeout: '4800'
 
+nfs_pek_ip: 'xxx.xxx.xxx.xxx'
+nfs_bos_ip: 'xxx.xxx.xxx.xxx'
+
 nfs_server:
- - 'xxx.xxx.xxx.xxx:/vol/s2kvmauto/iso'
- - 'xxx.xxx.xxx.xxx:/srv/kvmqe/isos'
+ - '{nfs_pek_ip}:/vol/s2kvmauto/iso'
+ - '{nfs_bos_ip}:/srv/kvmqe/isos'
 
 rtt_tolerance: '150'
 
