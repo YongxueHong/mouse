@@ -36,6 +36,7 @@ class CaseRunner(object):
         self._run_result['pass_cases'] = []
         self._run_result['case_time'] = {}
         self._run_result['total_time'] = 0
+        self.set_defualt_params()
         self.get_case_list()
         self._run_result['TOTAL'] = len(self._case_list)
 
@@ -208,6 +209,16 @@ class CaseRunner(object):
                     with open(log_file, "a") as trace_log:
                         traceback.print_exc(file=trace_log)
             case_queue.put(case)
+
+    def set_defualt_params(self):
+        if not self._params.get('repeat_times'):
+            self._params.get('repeat_times', '1')
+        if not self._params.get('verbose'):
+            self._params.get('verbose', 'no')
+        if not self._params.get('timeout'):
+            self._params.get('timeout', '4800')
+        if not self._params.get('src_host_ip'):
+            self._params.get('src_host_ip', '0')
 
     def main_run(self):
         start_time = time.time()

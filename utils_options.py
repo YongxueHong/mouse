@@ -21,7 +21,9 @@ options_list = [
     "drive_format=",
     "share_images_dir=",
     "local_images_dir=",
-    "image1_name="
+    "image1_name=",
+    "nfs_pek_ip=",
+    "nfs_bos_ip="
 ]
 
 help_info = "Usage: \n" \
@@ -53,6 +55,10 @@ help_info = "Usage: \n" \
             "               Run given images directory for case. \n" \
             "--image1_name=$image name \n" \
             "               Run given system images for guest. \n" \
+            "--nfs_pek_ip=$nfs server pek ip \n" \
+            "               Run given nfs server pek ip for case. \n" \
+            "--nfs_bos_ip=$nfs server bos ip \n" \
+            "               Run given nfs server bos ip for case. \n" \
             "Please see README for more information."
 
 class Options(object):
@@ -131,6 +137,10 @@ class Options(object):
                     opt_dict[opt] = val
                 elif opt == "--image1_name":
                     opt_dict[opt] = val
+                elif opt == "--nfs_pek_ip":
+                    opt_dict[opt] = val
+                elif opt == "--nfs_bos_ip":
+                    opt_dict[opt] = val
 
         except getopt.GetoptError:
             print("Please Check the command again.")
@@ -158,4 +168,8 @@ class Options(object):
                 params.get('local_images_dir', v)
             if k == '--image1_name':
                 params.get('image1_name', v)
+            if k == '--nfs_pek_ip':
+                params.get('nfs_pek_ip', v)
+            if k == '--nfs_bos_ip':
+                params.get('nfs_bos_ip', v)
 
