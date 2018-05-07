@@ -10,6 +10,7 @@ _usage()
 # set an initial value for the flag
 QUIET=false
 VERBOSE=true
+PASSWD="kvmautotest"
 
 _log()          { if ! $QUIET; then echo -e $*; fi; }
 _log_info()     { _log "\033[32mINFO\033[0m\t" $*; }
@@ -49,6 +50,9 @@ then
     _usage
     exit 1
 else
+    _log "ssh-copy-id to destination host"
+    _exec_cmd "sshpass -p $PASSWD ssh-copy-id -o \"StrictHostKeyChecking no\" -i /root/.ssh/id_rsa.pub root@$1"
+    _exit_on_error "Failed to ssh-copy-id to destination host"
     _log "update the clock of $1"
     _exec_cmd "ssh root@$1 ntpdate clock.redhat.com"
     _exit_on_error "Failed to update the clock of $1"
