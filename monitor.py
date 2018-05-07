@@ -253,8 +253,6 @@ class RemoteQMPMonitor(RemoteMonitor):
             if not output:
                 err_info = 'Failed to run %s under %s sec' % (cmd, recv_timeout)
                 RemoteMonitor.test_error(self, err_info)
-            if 'error' in output:
-                RemoteMonitor.test_error(self, output)
             if verbose == True:
                 RemoteMonitor.test_print(self, output)
         return output
