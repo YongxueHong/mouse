@@ -158,22 +158,16 @@ _pre_install()
         _exec_cmd "pip install setuptools==39.0.1"
     fi
 
-    _log_info "Install Red Hat CA certificates"
-    _exec_cmd "wget https://password.corp.redhat.com/RH-IT-Root-CA.crt -O " \
-              "/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt --no-check-certificate"
-    _exit_on_error "Failed to download RH-IT-Root-CA.crt"
+    _log_info "Install tool sshpass"
+    _exec_cmd "wget http://sourceforge.net/projects/sshpass/files/sshpass/1.05/sshpass-1.05.tar.gz"
+    _exec_cmd "tar -xvf sshpass-1.05.tar.gz"
+    _exec_cmd "cd sshpass-1.05/; ./configure; make; make install"
+    _exec_cmd "sshpass -V"
+    _exit_on_error "Failed to install sshpass"
 
-    _exec_cmd "wget https://password.corp.redhat.com/legacy.crt -O " \
-              "/etc/pki/ca-trust/source/anchors/legacy.crt --no-check-certificate"
-    _exit_on_error "Failed to download legacy.crt"
-
-    _exec_cmd "wget https://engineering.redhat.com/Eng-CA.crt -O " \
-              "/etc/pki/ca-trust/source/anchors/Eng-CA.crt --no-check-certificate"
-    _exit_on_error "Failed to download Eng-CA.crt"
-
-    _exec_cmd "update-ca-trust enable"
-    _exec_cmd "update-ca-trust extract"
-    _exit_on_error "Failed to install Red Hat CA certificates"
+    _log_info "Generate ssh key"
+    _exec_cmd "yes | ssh-keygen -t rsa -N \"\" -f ~/.ssh/id_rsa"
+    _exit_on_error "Failed to generate ssh key"
 }
 
 _install()
