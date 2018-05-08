@@ -40,7 +40,7 @@ incoming_port: '4000'
 share_images_dir: '/xxx/xxx/xxx/'
 
 # Set the guest system image.
-image_name: 'xxxx.qcow2'
+sys_image_name: 'xxxx.qcow2'
 
 # Set data disks
 disk1_name: 'd1.raw'
@@ -118,7 +118,7 @@ vm_cmd_base:
   - 'file={share_images_dir}/{disk1_name},if=none,id=drive-scsi0-0-0-0,format=raw,cache=none'
   - 'file={share_images_dir}/{disk2_name},id=drive_blk,format=qcow2,if=none,cache=none,werror=stop,rerror=stop'
   - 'file={share_images_dir}/{disk3_name},if=none,id=drive-data0,format=raw,cache=none,aio=native'
-  - 'file={share_images_dir}/{image_name},if=none,id=drive_image1,snapshot=off,aio=threads,cache=none,format=qcow2'
+  - 'file={share_images_dir}/{sys_image_name},if=none,id=drive_image1,snapshot=off,aio=threads,cache=none,format=qcow2'
   - 'file={share_images_dir}/{disk4_name},format=qcow2,if=none,cache=none,id=drive_plane,werror=stop,rerror=stop'
   - 'file={share_images_dir}/{disk5_name},if=none,id=drive-system-disk,format=qcow2,cache=none,aio=native,werror=stop,rerror=stop'
   - 'file={share_images_dir}/{cdrom1_name},id=drive_cd1,if=none,snapshot=off,aio=threads,cache=none,media=cdrom'

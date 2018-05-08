@@ -21,7 +21,7 @@ options_list = [
     "drive_format=",
     "share_images_dir=",
     "local_images_dir=",
-    "image1_name=",
+    "sys_image_name=",
     "nfs_pek_ip=",
     "nfs_bos_ip="
 ]
@@ -53,8 +53,8 @@ help_info = "Usage: \n" \
             "               Run given share images directory for migration case. \n" \
             "--local_images_dir=$images dir \n" \
             "               Run given images directory for case. \n" \
-            "--image1_name=$image name \n" \
-            "               Run given system images for guest. \n" \
+            "--sys_image_name=$image name \n" \
+            "               Run given system images for local host case. \n" \
             "--nfs_pek_ip=$nfs server pek ip \n" \
             "               Run given nfs server pek ip for case. \n" \
             "--nfs_bos_ip=$nfs server bos ip \n" \
@@ -135,7 +135,7 @@ class Options(object):
                     opt_dict[opt] = val
                 elif opt == "--local_images_dir":
                     opt_dict[opt] = val
-                elif opt == "--image1_name":
+                elif opt == "--sys_image_name":
                     opt_dict[opt] = val
                 elif opt == "--nfs_pek_ip":
                     opt_dict[opt] = val
@@ -166,8 +166,8 @@ class Options(object):
                 params.get('share_images_dir', v)
             if k == '--local_images_dir':
                 params.get('local_images_dir', v)
-            if k == '--image1_name':
-                params.get('image1_name', v)
+            if k == '--sys_image_name':
+                params.get('sys_image_name', v)
             if k == '--nfs_pek_ip':
                 params.get('nfs_pek_ip', v)
             if k == '--nfs_bos_ip':

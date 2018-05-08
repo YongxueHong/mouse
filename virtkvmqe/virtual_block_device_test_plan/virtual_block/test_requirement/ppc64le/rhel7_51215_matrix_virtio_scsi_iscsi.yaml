@@ -36,7 +36,7 @@ incoming_port: '4000'
 iscsi_images_dir: 'iscsi://{iscsi_server_ip}:3260/{iscsi_target_iqn_name}'
 
 # Set the guest system image.
-image1_name: 'xxxx.qcow2'
+sys_image_name: 'xxxx.qcow2'
 
 # Set the guest memory size.
 mem_size: '4096'

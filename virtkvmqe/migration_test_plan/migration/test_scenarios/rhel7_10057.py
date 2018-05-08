@@ -88,7 +88,7 @@ def run_case(params):
 
     dirty_cmd = 'cd /home;./dirty1'
     thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(dirty_cmd, 600))
+                              args=(dirty_cmd, 4800))
     thread.name = 'dirty1'
     thread.daemon = True
     thread.start()
