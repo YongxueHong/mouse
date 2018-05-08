@@ -219,7 +219,7 @@ def dirty_page_test(host_session, guest_session, guest_ip, script):
 
     dirty_cmd = 'cd /home;./dirty_page'
     thread = threading.Thread(target=guest_session.guest_cmd_output,
-                              args=(dirty_cmd, 600))
+                              args=(dirty_cmd, 4800))
     thread.name = 'dirty_page'
     thread.daemon = True
     thread.start()

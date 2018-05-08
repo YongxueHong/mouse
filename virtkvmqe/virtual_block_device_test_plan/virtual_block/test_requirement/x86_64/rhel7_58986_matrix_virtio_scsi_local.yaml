@@ -40,7 +40,7 @@ incoming_port: '4000'
 local_images_dir: '/xxx/xxx/xxx/'
 
 # Set the guest system image.
-image1_name: 'xxxx.qcow2'
+sys_image_name: 'xxxx.qcow2'
 
 # Set the guest memory size.
 mem_size: '4096'
@@ -79,7 +79,7 @@ vm_cmd_base:
   - 'virtio-net-pci,mac=9a:8a:8b:8c:8d:8e,id=net0,vectors=4,netdev=tap0,bus=pci.0,addr=0x5'
   - 'usb-tablet,id=usb-tablet1,bus=usb1.0,port=1'
  drive:
-  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file={local_images_dir}/{image1_name}'
+  - 'id=drive_image1,if=none,snapshot=off,aio=threads,cache=none,format=qcow2,file={local_images_dir}/{sys_image_name}'
  netdev:
   - 'tap,id=tap0,vhost=on'
  m:

@@ -67,7 +67,7 @@ def run_case(params):
                            'aio=threads,cache=none,format=qcow2,'
                            'file=%s/%s'
                            % (params.get('share_images_dir'),
-                              params.get('image1_name')))
+                              params.get('sys_image_name')))
     if params.get('image_format') == 'qcow2':
         image = os.path.join(tmp_install_dir,
                              (params.get('image_name') + '.qcow2'))
