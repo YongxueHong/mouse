@@ -57,28 +57,42 @@ else
     _log "ssh-copy-id to destination host"
     _exec_cmd "sshpass -p $PASSWD ssh-copy-id -o \"StrictHostKeyChecking no\" -i /root/.ssh/id_rsa.pub root@$dst_host_ip"
     _exit_on_error "Failed to ssh-copy-id to destination host"
+
     _log "update the clock of destination host"
     _exec_cmd "ssh root@$dst_host_ip ntpdate clock.redhat.com"
     _exit_on_error "Failed to update the clock of destination host"
+
     _log "update the clock of local host"
     _exec_cmd "ntpdate clock.redhat.com"
     _exit_on_error "Failed to update the clock of local host"
+
     _log "flush iptables rules of local host"
     _exec_cmd "iptables -F"
     _exit_on_error "Failed to update the clock of local host"
+
     _log "flush iptables rules of destination host"
     _exec_cmd "ssh root@$dst_host_ip iptables -F"
     _exit_on_error "Failed to update the clock of destination host"
+
     _log "configure nfs of local host"
-    _exec_cmd "mkdir $share_images_dir"
+    _exec_cmd "mkdir -p $share_images_dir"
     _exec_cmd "echo $share_images_dir *\(rw,sync,no_root_squash\) > /etc/exports"
     _exec_cmd "systemctl start nfs"
     _exec_cmd "systemctl restart nfs"
     _exec_cmd "systemctl status nfs"
     _exit_on_error "Failed to start nfs service"
+
     _log "mount src dir to destination host"
-    _exec_cmd "ssh root@$dst_host_ip mkdir $share_images_dir"
+    _exec_cmd "ssh root@$dst_host_ip mkdir -p $share_images_dir"
     _exec_cmd "ssh root@$dst_host_ip umount $share_images_dir"
-    _exec_cmd "ssh root@$dst_host_ip mount $src_host_ip:$share_images_dir $share_images_dir"
+    _exec_cmd "ssh root@$dst_host_ip mount -t nfs $src_host_ip:$share_images_dir $share_images_dir"
     _exit_on_error "Failed to mount src dir to destination host"
+
+    _log "Install bridge-utils"
+    _exec_cmd "ssh root@$dst_host_ip yum install -y bridge-utils"
+    _exit_on_error "Failed to install bridge-utils on $dst_host_ip"
+
+    _log "Copy qemu-ifup/ifdown script to destination host"
+    _exec_cmd "scp /etc/qemu-if* $dst_host_ip:/etc/"
+    _exit_on_error "Failed to copy qemu-ifup/ifdown script to $dst_host_ip"
 fi
