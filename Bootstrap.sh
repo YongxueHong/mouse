@@ -173,7 +173,7 @@ _pre_install()
 _install()
 {
 
-    _exec_cmd "pip install -r requirements.txt"
+    _exec_cmd "pip install -r $BASE_DIR/requirements.txt"
     _exit_on_error "Failed to install mouse's requirements"
 
 }
