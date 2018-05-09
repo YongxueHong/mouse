@@ -91,8 +91,8 @@ def run_case(params):
     host_session.host_cmd_output('mount -t nfs %s %s' % (mount_info, isos_dir))
 
     test.main_step_log('4. Find the corresponding iso')
-    iso_pattern = params.get('iso_name') + '*' + 'Server' + '*' \
-               + params.get('guest_arch') + '*' + 'dvd1.iso'
+    iso_pattern = params.get('iso_name') + '*' + 'Server' + '-' \
+               + params.get('guest_arch') + '-' + 'dvd1.iso'
     iso_name = host_session.host_cmd_output('find %s -name %s'
                                             % (isos_dir, iso_pattern))
     if not iso_name:
@@ -138,11 +138,19 @@ def run_case(params):
 
     test.main_step_log('7. cp vmlinuz and initrd.img form %s.' % iso_name)
     host_session.host_cmd_output('mount %s %s' % (iso_name, mount_dir))
-    host_session.host_cmd_output('cp /%s/images/pxeboot/vmlinuz %s'
-                                 % (mount_dir, image_dir))
-    host_session.host_cmd_output('cp /%s/images/pxeboot/initrd.img %s'
-                                 % (mount_dir, image_dir))
-    host_session.host_cmd_output('umount %s' % mount_dir)
+
+    if 'x86_64' in params.get('guest_arch'):
+        host_session.host_cmd_output('cp /%s/images/pxeboot/vmlinuz %s'
+                                     % (mount_dir, image_dir))
+        host_session.host_cmd_output('cp /%s/images/pxeboot/initrd.img %s'
+                                     % (mount_dir, image_dir))
+        host_session.host_cmd_output('umount %s' % mount_dir)
+    if 'ppc64' in params.get('guest_arch'):
+        host_session.host_cmd_output('cp /%s/ppc/ppc64/vmlinuz %s'
+                                     % (mount_dir, image_dir))
+        host_session.host_cmd_output('cp /%s/ppc/ppc64/initrd.img %s'
+                                     % (mount_dir, image_dir))
+        host_session.host_cmd_output('umount %s' % mount_dir)
 
     test.main_step_log('8. Check the name of mounted ks.iso.')
     host_session.host_cmd_output('mount %s %s' % (ks_iso, mount_dir))
@@ -152,9 +160,9 @@ def run_case(params):
     params.vm_base_cmd_add('kernel',
                            '"%s/vmlinuz"' % image_dir)
     console_option = ''
-    if params.get('guest_arch') == 'x86_64':
+    if 'x86_64' in params.get('guest_arch'):
         console_option = 'ttyS0,115200'
-    elif params.get('guest_arch') == 'ppc64le':
+    if 'ppc64' in params.get('guest_arch'):
         console_option = 'hvc0,38400'
     params.vm_base_cmd_add('append',
                            '"ksdevice=link inst.repo=cdrom:/dev/sr0 '
