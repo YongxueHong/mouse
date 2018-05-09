@@ -26,6 +26,8 @@ def run_case(params):
     disk5_name = params.get('disk5_name').split('.')[0]
     disk5_format = params.get('disk5_name').split('.')[1]
     iso = params.get('cdrom1_name')
+    downtime = '10000'
+    speed = '1073741824'
 
     test = CreateTest(case_id='rhel7_110657', params=params)
     id = test.get_id()
@@ -91,12 +93,18 @@ def run_case(params):
     test.main_step_log('3. Migrate guest from Source Host host to Destination'
                        ' Host  host')
     check_info = utils_migration.do_migration(remote_qmp=src_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=dst_host_ip)
+                              migrate_port=incoming_port, dst_ip=dst_host_ip,
+                                              chk_timeout=300)
     if (check_info == False):
+        utils_migration.change_downtime(remote_qmp=src_remote_qmp,
+                                        downtime_val=downtime)
+        utils_migration.change_speed(remote_qmp=src_remote_qmp, speed_val=speed)
+    query_info = utils_migration.query_migration(remote_qmp=src_remote_qmp)
+    if (query_info == False):
         test.test_error('Migration timeout')
 
     test.main_step_log('4.Check devices function one by one')
-    output = dst_serial.serial_cmd_output('dmesg')
+    output = dst_serial.serial_cmd_output('dmesg', recv_timeout=20)
     if re.findall(r'Call Trace:', output):
         test.test_error('Guest hit call trace after migration')
     dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
@@ -128,12 +136,19 @@ def run_case(params):
     src_remote_qmp = RemoteQMPMonitor(id, params, ip=src_host_ip, port=qmp_port)
     src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
     check_info = utils_migration.do_migration(remote_qmp=dst_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=src_host_ip)
+                              migrate_port=incoming_port, dst_ip=src_host_ip,
+                                              chk_timeout=300)
+
     if (check_info == False):
+        utils_migration.change_downtime(remote_qmp=dst_remote_qmp,
+                                        downtime_val=downtime)
+        utils_migration.change_speed(remote_qmp=dst_remote_qmp, speed_val=speed)
+    query_info = utils_migration.query_migration(remote_qmp=dst_remote_qmp)
+    if (query_info == False):
         test.test_error('Migration timeout')
 
     test.main_step_log('6.Repeat step 4')
-    output = src_serial.serial_cmd_output('dmesg')
+    output = src_serial.serial_cmd_output('dmesg', recv_timeout=20)
     if re.findall(r'Call Trace:', output):
         test.test_error('Guest hit call trace after migration')
     src_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
