@@ -338,6 +338,50 @@ class RemoteSerialMonitor(RemoteMonitor):
         if real_logined == False:
             RemoteMonitor.test_error(self, err_info)
 
+    def first_login(self, login_recv_timeout=8):
+        cmd = 'root'
+        RemoteMonitor.send_cmd(self, cmd)
+        output = RemoteMonitor.rec_data(self, recv_timeout=login_recv_timeout)
+        RemoteMonitor.test_print(self, info=output, serial_debug=True)
+
+        self.prompt_password(output)
+
+        RemoteMonitor.send_cmd(self, self._guest_passwd)
+        RemoteMonitor.test_print(self, info=self._guest_passwd,
+                                 serial_debug=True)
+        output = RemoteMonitor.rec_data(self, recv_timeout=login_recv_timeout)
+        RemoteMonitor.test_print(self, info=output, serial_debug=True)
+        return output
+
+    def try2login(self, output, login_recv_timeout=8, timeout=600):
+        deadline = time.time() + timeout
+        try_cont = 1
+        while time.time() < deadline:
+            if re.findall(r'Login incorrect', output):
+                RemoteMonitor.test_print(self, info='Try to login again.')
+                cmd = 'root'
+                RemoteMonitor.send_cmd(self, cmd)
+                output = RemoteMonitor.rec_data(self,
+                                                recv_timeout=login_recv_timeout)
+                RemoteMonitor.test_print(self, info=output, serial_debug=True)
+
+                self.prompt_password(output)
+
+                RemoteMonitor.send_cmd(self, self._guest_passwd)
+                RemoteMonitor.test_print(self, info=self._guest_passwd,
+                                         serial_debug=True)
+                output = RemoteMonitor.rec_data(self,
+                                                recv_timeout=login_recv_timeout)
+                RemoteMonitor.test_print(self, info=output, serial_debug=True)
+                try_cont = try_cont + 1
+                if  'incorrect' not in output:
+                    return output
+            elif 'incorrect' not in output:
+                return output
+
+        RemoteMonitor.test_error(self, 'Fail to login %s times under %s'
+                                 % (try_cont, timeout))
+
     def serial_login(self, recv_timeout=RemoteMonitor.DATA_AVAILABLE_TIMEOUT,
                      login_recv_timeout=8,
                      max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
@@ -359,35 +403,9 @@ class RemoteSerialMonitor(RemoteMonitor):
             err_info = 'No prompt \"login:\" under %s sec' % timeout
             RemoteMonitor.test_error(self, err_info)
 
-        cmd = 'root'
-        RemoteMonitor.send_cmd(self, cmd)
-        output = RemoteMonitor.rec_data(self, recv_timeout=login_recv_timeout)
-        RemoteMonitor.test_print(self, info=output, serial_debug=True)
+        output = self.first_login()
 
-        self.prompt_password(output)
-
-        RemoteMonitor.send_cmd(self, self._guest_passwd)
-        RemoteMonitor.test_print(self, info=self._guest_passwd,
-                                 serial_debug=True)
-        output = RemoteMonitor.rec_data(self, recv_timeout=login_recv_timeout)
-        RemoteMonitor.test_print(self, info=output, serial_debug=True)
-
-        if re.findall(r'Login incorrect', output):
-            RemoteMonitor.test_print(self, info='Try to login again.')
-            cmd = 'root'
-            RemoteMonitor.send_cmd(self, cmd)
-            output = RemoteMonitor.rec_data(self,
-                                            recv_timeout=login_recv_timeout)
-            RemoteMonitor.test_print(self, info=output, serial_debug=True)
-
-            self.prompt_password(output)
-
-            RemoteMonitor.send_cmd(self, self._guest_passwd)
-            RemoteMonitor.test_print(self, info=self._guest_passwd,
-                                     serial_debug=True)
-            output = RemoteMonitor.rec_data(self,
-                                            recv_timeout=login_recv_timeout)
-            RemoteMonitor.test_print(self, info=output, serial_debug=True)
+        output = self.try2login(output)
 
         self.prompt_shell(output)
 
