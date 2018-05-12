@@ -115,6 +115,7 @@ def run_case(params):
             break
     if (flag == False):
         src_host_session.test_error('Failed to quit src qemu')
+    time.sleep(5)
     params.vm_base_cmd_add('device', 'virtio-balloon-pci,id=balloon0,'
                                      'bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()
@@ -142,8 +143,4 @@ def run_case(params):
     src_guest_session.guest_ping_test('www.redhat.com', 10)
 
     test.sub_step_log('11.3 quit qemu on dst end and shutdown vm on src end')
-    src_serial.serial_shutdown_vm()
 
-    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
-    if output:
-        dst_remote_qmp.test_error('Failed to quit qemu on dst host')

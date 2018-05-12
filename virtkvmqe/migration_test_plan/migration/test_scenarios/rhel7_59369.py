@@ -104,10 +104,8 @@ def run_case(params):
     output = dst_serial.serial_cmd_output(cmd)
     if re.findall(r'Call Trace:', output):
         test.test_error('Guest hit call trace')
-    output = dst_serial.serial_cmd_output(cmd='reboot')
-    if re.findall(r'Call trace', output):
-        dst_serial.test_error('Guest hit Call trace during reboot')
-    dst_serial.serial_login()
+    dst_serial.serial_cmd_output(cmd='reboot')
+    dst_guest_ip = dst_serial.serial_login()
 
     cmd = "lscpu | sed -n '3p' | awk '{print $2}'"
     output = dst_serial.serial_cmd_output(cmd=cmd)
@@ -116,4 +114,4 @@ def run_case(params):
     else:
         test.test_error('After reboot, the guest cpus info is wrong')
 
-    dst_serial.serial_shutdown_vm()
+

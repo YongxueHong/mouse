@@ -106,12 +106,3 @@ def run_case(params):
         dst_serial.test_error('Failed to dd a file in guest')
 
     test.sub_step_log('4.5 Shutdown guest')
-    dst_guest_session.guest_cmd_output('shutdown -h now')
-    output = dst_serial.serial_output()
-    if re.findall(r'Call Trace:', output):
-        test.test_error('Guest hit call trace')
-
-    src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
-    output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
-    if output:
-        test.test_error('Failed to quit qemu on src end')
