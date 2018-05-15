@@ -18,8 +18,8 @@ to configure network bridge, sure, you could ignore this step:
 c)Thirdly, if you are going to test multi-host migration, you need to
 execute "Bootstrap-migration.sh" to configure source host and destination host:
 ==>sh Bootstrap-migration.sh
-please input the src host ip:10.16.67.232
-please input the dst host ip:10.16.42.55
+please input the src host ip:xx.xx.xx.xx
+please input the dst host ip:xx.xx.xx.xx
 please input the share_images_dir:/home/xianwang
 Notice:
 src host ip: the source host ip
@@ -38,20 +38,20 @@ if you want to execute some specific cases, you should use option:
 
 b)For multi-host migration test, the following parameters must be specified:
 ==>python Start2Run.py --test_requirement=rhel7_58700 --test_cases=rhel7_10022
---src_host_ip=10.16.42.47 --dst_host_ip=10.16.42.50
---share_images_dir=/home/xianwang --image1_name=rhel75-ppc64le-virtio-scsi.qcow2
+--src_host_ip=xx.xx.xx.xx --dst_host_ip=xx.xx.xx.xx
+--share_images_dir=/home/xianwang --sys_image_name=rhel75-ppc64le-virtio-scsi.qcow2
 
 if there are installation cases in this loop, the parameters about nfs server
 must be specified as following:
-==>python Start2Run.py --test_requirement=rhel7_58700 --src_host_ip=10.16.42.47
- --dst_host_ip=10.16.42.50 --share_images_dir=/home/xianwang
- --image1_name=rhel75-ppc64le-virtio-scsi.qcow2 --nfs_bos_ip=10.12.0.20
- --nfs_pek_ip=10.73.194.27
+==>python Start2Run.py --test_requirement=rhel7_58700 --src_host_ip=xx.xx.xx.xx
+ --dst_host_ip=xx.xx.xx.xx --share_images_dir=/home/xianwang
+ --sys_image_name=rhel75-ppc64le-virtio-scsi.qcow2 --nfs_bos_ip=xx.xx.xx.xx
+ --nfs_pek_ip=xx.xx.xx.xx
 
 c)The option "repeat_times" allows us to run loop or cases for some times
 ==>python Start2Run.py --test_requirement=rhel7_58700 --test_cases=rhel7_10022
---src_host_ip=10.16.42.47 --dst_host_ip=10.16.42.50
---share_images_dir=/home/xianwang --image1_name=rhel75-ppc64le-virtio-scsi.qcow2
+--src_host_ip=xx.xx.xx.xx --dst_host_ip=xx.xx.xx.xx
+--share_images_dir=/home/xianwang --sys_image_name=rhel75-ppc64le-virtio-scsi.qcow2
 --repeat_times=3
 
 III.Log
