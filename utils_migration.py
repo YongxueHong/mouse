@@ -4,24 +4,56 @@ from monitor import RemoteQMPMonitor
 import re
 import threading
 
-def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout=1200):
+def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout_1=180,
+                 chk_timeout_2=1200, downtime_val='20000',
+                 speed_val='1073741824'):
     cmd = '{"execute":"migrate", "arguments": { "uri": "tcp:%s:%s" }}' \
               % (dst_ip, migrate_port)
     remote_qmp.qmp_cmd_output(cmd=cmd)
     remote_qmp.sub_step_log('Check the status of migration')
-    return query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout)
+    ret = query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout_1)
+    if (ret == False):
+        change_downtime(remote_qmp=remote_qmp, downtime_val=downtime_val)
+        change_speed(remote_qmp=remote_qmp, speed_val=speed_val)
+        ret = query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout_2)
 
-def query_migration(remote_qmp, interval=5, chk_timeout=1200, recv_timeout=5):
+    return ret
+
+def query_migration(remote_qmp, interval=5, chk_timeout=1200):
     cmd = '{"execute":"query-migrate"}'
     end_time = time.time() + chk_timeout
     while time.time() < end_time:
-        output = remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=recv_timeout)
+        output = remote_qmp.qmp_cmd_output(cmd=cmd)
         if re.findall(r'"remaining": 0', output):
             return True
         elif re.findall(r'"status": "failed"', output):
             remote_qmp.test_error('migration failed')
         time.sleep(interval)
     return False
+
+def change_downtime(remote_qmp, downtime_val):
+    downtime_cmd = '{"execute":"migrate-set-parameters","arguments":' \
+                   '{"downtime-limit": %s}}' % downtime_val
+    remote_qmp.qmp_cmd_output(cmd=downtime_cmd)
+    paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
+    output = remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd,
+                                           recv_timeout=5)
+    if re.findall(r'"downtime-limit": %s' % downtime_val, output):
+        remote_qmp.test_print('Change migration downtime successfully')
+    else:
+        remote_qmp.test_error('Failed to change migration downtime')
+
+def change_speed(remote_qmp, speed_val):
+    speed_cmd = '{"execute":"migrate-set-parameters","arguments":' \
+                '{"max-bandwidth": %s}}' % speed_val
+    remote_qmp.qmp_cmd_output(cmd=speed_cmd)
+    paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
+    output = remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd,
+                                           recv_timeout=5)
+    if re.findall(r'"max-bandwidth": %s' % speed_val, output):
+        remote_qmp.test_print('Change migration speed successfully')
+    else:
+        remote_qmp.test_error('Failed to change migration speed')
 
 def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
                         dst_remote_qmp, times=10, query_thread=None):
@@ -53,16 +85,17 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
                 and re.findall(r'"status": "inmigrate"', dst_output):
             src_host_session.sub_step_log('%d: Do migration from src to dst' % i)
             ret = do_migration(remote_qmp=src_remote_qmp, dst_ip=dst_ip,
-                                migrate_port=migrate_port)
+                               migrate_port=migrate_port)
             if (ret == True):
                 cmd = '{"execute":"query-status"}'
-                output = dst_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=5)
+                output = dst_remote_qmp.qmp_cmd_output(cmd=cmd)
                 if re.findall(r'"status": "running"', output):
                     src_host_session.test_print('Migration from src to dst succeed')
                 else:
                     src_host_session.test_error('Guest is not running on dst side')
             elif (ret == False):
                 src_host_session.test_error('Migration from src to dst timeout')
+            time.sleep(3)
 
         elif re.findall(r'"status": "running"', dst_output) \
                 and re.findall(r'"status": "postmigrate"', src_output):
@@ -71,6 +104,7 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
                                           echo_cmd=False)
 
             src_host_session.check_guest_process(src_ip=src_ip)
+            time.sleep(3)
 
             src_host_session.sub_step_log('start src with -incoming')
             opt_value = 'tcp:0:%s' % migrate_port
@@ -84,13 +118,14 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
                                 migrate_port=migrate_port)
             if (ret == True):
                 cmd = '{"execute":"query-status"}'
-                output = src_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=5)
+                output = src_remote_qmp.qmp_cmd_output(cmd=cmd)
                 if re.findall(r'"status": "running"', output):
                     src_host_session.test_print('Migration from dst to src succeed')
                 else:
                     src_host_session.test_error('Guest is not running on src side')
             elif (ret == False):
                 src_host_session.test_error('Migration from dst to src timeout')
+            time.sleep(3)
 
         elif re.findall(r'"status": "running"', src_output) \
                 and re.findall(r'"status": "postmigrate"', dst_output):
@@ -99,6 +134,7 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
                                           echo_cmd=False)
 
             src_host_session.check_guest_process(dst_ip=dst_ip)
+            time.sleep(3)
 
             src_host_session.sub_step_log('start dst with -incoming ')
             opt_value = 'tcp:0:%s' % migrate_port
@@ -109,18 +145,18 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
                                                vm_alias='dst')
             time.sleep(5)
             dst_remote_qmp = RemoteQMPMonitor(id, params, dst_ip, qmp_port)
-
             ret = do_migration(remote_qmp=src_remote_qmp, dst_ip=dst_ip,
                                 migrate_port=migrate_port)
             if (ret == True):
                 cmd = '{"execute":"query-status"}'
-                output = dst_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=5)
+                output = dst_remote_qmp.qmp_cmd_output(cmd=cmd)
                 if re.findall(r'"status": "running"', output):
                     src_host_session.test_print('Migration from src to dst succeed')
                 else:
                     src_host_session.test_error('Guest is not running on dst side')
             elif (ret == False):
                 src_host_session.test_error('Migration from src to dst timeout')
+            time.sleep(3)
 
     return src_remote_qmp, dst_remote_qmp
 
