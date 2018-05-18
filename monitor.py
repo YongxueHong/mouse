@@ -591,7 +591,7 @@ class RemoteSerialMonitor(RemoteMonitor):
             RemoteMonitor.test_error(
                 self, 'Failed to shutdown vm under %s sec.' % timeout)
 
-    def serial_shutdown_vm(self, timeout=30):
+    def serial_shutdown_vm(self, timeout=60):
         output = self.serial_cmd_output('shutdown -h now', timeout)
         if re.findall(r'Call Trace', output):
             RemoteMonitor.test_error(
