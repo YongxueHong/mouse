@@ -31,13 +31,27 @@ def query_migration(remote_qmp, interval=5, chk_timeout=1200):
         time.sleep(interval)
     return False
 
+def query_status(remote_qmp, status, interval=1, chk_timeout=300):
+    cmd = '{"execute":"query-migrate"}'
+    end_time = time.time() + chk_timeout
+    while time.time() < end_time:
+        output = remote_qmp.qmp_cmd_output(cmd=cmd)
+        if re.findall(r'"status": "%s"' % status, output):
+            return True
+        elif re.findall(r'"remaining": 0', output):
+            remote_qmp.test_error('migration is already completed')
+        elif re.findall(r'"status": "failed"', output):
+            remote_qmp.test_error('migration failed')
+        time.sleep(interval)
+    return False
+
 def change_downtime(remote_qmp, downtime_val):
     downtime_cmd = '{"execute":"migrate-set-parameters","arguments":' \
                    '{"downtime-limit": %s}}' % downtime_val
     remote_qmp.qmp_cmd_output(cmd=downtime_cmd)
     paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
     output = remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd,
-                                           recv_timeout=5)
+                                           recv_timeout=2)
     if re.findall(r'"downtime-limit": %s' % downtime_val, output):
         remote_qmp.test_print('Change migration downtime successfully')
     else:
@@ -49,7 +63,7 @@ def change_speed(remote_qmp, speed_val):
     remote_qmp.qmp_cmd_output(cmd=speed_cmd)
     paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
     output = remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd,
-                                           recv_timeout=5)
+                                           recv_timeout=2)
     if re.findall(r'"max-bandwidth": %s' % speed_val, output):
         remote_qmp.test_print('Change migration speed successfully')
     else:
@@ -323,3 +337,4 @@ def create_disk(host_session, disk_dir, disk_name, disk_format, disk_size):
     else:
         host_session.test_error('The format of %s disk is not %s'
                                 % (disk_name, disk_format))
+

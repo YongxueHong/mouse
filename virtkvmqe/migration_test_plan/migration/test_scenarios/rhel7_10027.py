@@ -49,7 +49,7 @@ def run_case(params):
         output = src_serial.serial_output(max_recv_data=128, search_str=search_str)
         if re.findall(r'Found the searched keyword', output):
             test.test_print(output)
-            do_migration(src_remote_qmp, incoming_port, dst_host_ip, chk_timeout=1200)
+            do_migration(src_remote_qmp, incoming_port, dst_host_ip)
             break
         else:
             test.test_print(output)

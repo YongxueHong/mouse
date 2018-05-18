@@ -94,7 +94,7 @@ def run_case(params):
     test.main_step_log('4.Do live migration')
     check_info = do_migration(remote_qmp=src_remote_qmp,
                               migrate_port=incoming_port, dst_ip=dst_host_ip,
-                              chk_timeout=query_migration_time)
+                              chk_timeout_2=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout after changing downtime')
 

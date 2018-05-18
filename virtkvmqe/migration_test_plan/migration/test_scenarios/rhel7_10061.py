@@ -108,30 +108,10 @@ def run_case(params):
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('6. Do live migration again')
-    flag = do_migration(remote_qmp=src_remote_qmp,
-                        migrate_port=incoming_port, dst_ip=dst_host_ip,
-                        chk_timeout=chk_time_1)
-    if (flag == False):
-        test.sub_step_log('6.1 Enlarge the value of downtime and speed')
-        downtime_cmd = '{"execute":"migrate-set-parameters","arguments":' \
-                       '{"downtime-limit": %s}}' % downtime
-        src_remote_qmp.qmp_cmd_output(cmd=downtime_cmd)
-        speed_cmd = '{"execute":"migrate-set-parameters","arguments":' \
-                    '{"max-bandwidth": %s}}' % speed
-        src_remote_qmp.qmp_cmd_output(cmd=speed_cmd)
-        paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
-        output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd,
-                                               recv_timeout=20)
-        if re.findall(r'"downtime-limit": %s' % downtime, output) \
-                and re.findall(r'"max-bandwidth": %s' % speed, output):
-            test.test_print('Change downtime and speed successfully')
-        else:
-            test.test_error('Failed to change downtime and speed')
-        test.sub_step_log('6.2 Check migration status again')
-        output = query_migration(remote_qmp=src_remote_qmp,
-                                 chk_timeout=chk_time_2)
-        if (output == False):
-            test.test_error('Migration timeout after change downtime & speed')
+    output = do_migration(remote_qmp=src_remote_qmp,
+                        migrate_port=incoming_port, dst_ip=dst_host_ip)
+    if (output == False):
+        test.test_error('Migration timeout')
 
     test.main_step_log('7. After migration succeed, '
                        'checking  the status of guest on the dst host')

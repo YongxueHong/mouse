@@ -105,7 +105,7 @@ def run_case(params):
     test.main_step_log('5.set downtime for migration')
     flag_active = False
     cmd = '{"execute":"query-migrate"}'
-    end_time = time.time() + query_timeout
+    end_time = time.time() + active_timeout
     while time.time() < end_time:
         output = src_remote_qmp.qmp_cmd_output(cmd)
         if re.findall(r'"status": "active"', output):
@@ -132,7 +132,7 @@ def run_case(params):
     cmd = '{"execute":"query-migrate"}'
     end_time = time.time() + query_timeout
     while time.time() < end_time:
-        output = src_remote_qmp.qmp_cmd_output(cmd=cmd, recv_timeout=8)
+        output = src_remote_qmp.qmp_cmd_output(cmd=cmd)
         if re.findall(r'"remaining": 0', output):
             flag = True
             break
