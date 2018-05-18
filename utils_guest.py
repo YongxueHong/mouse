@@ -214,15 +214,15 @@ class GuestSessionV3(TestCmd):
 
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
                "-o PreferredAuthentications=password -p %s %s@%s" % (22, 'root', ip))
-        TestCmd.test_print(self, cmd)
         self._ssh = aexpect.ShellSession(cmd)
         try:
-            self.handle_prompts('root', self._passwd, 30)
+            self._handle_prompts('root', self._passwd, 30)
             TestCmd.test_print(self, 'Connect guest session successfully.')
         except Exception:
             self._ssh.close()
+            TestCmd.test_error(self, 'Failed to ssh guest session.')
 
-    def handle_prompts(self, username, password, timeout=10):
+    def _handle_prompts(self, username, password, timeout=60):
         password_prompt_count = 0
         login_prompt_count = 0
         while True:
@@ -231,10 +231,8 @@ class GuestSessionV3(TestCmd):
                     [r"[Aa]re you sure",
                      r"[Pp]assword:\s*",
                      r"(?<![Ll]ast).*[Ll]ogin:\s*$",
-                     # Don't match "Last Login:"
                      r"[Cc]onnection.*closed",
                      r"[Cc]onnection.*refused",
-                     r"[Pp]lease wait",
                      r"[Ww]arning",
                      r"[Ee]nter.*username",
                      r"[Ee]nter.*password"],
@@ -246,7 +244,7 @@ class GuestSessionV3(TestCmd):
                     if password_prompt_count == 0:
                         self._ssh.sendline(password)
                         password_prompt_count += 1
-                        continue
+                        break
                     else:
                         pass
                 elif match == 2 or match == 7:  # "login:"
@@ -258,18 +256,13 @@ class GuestSessionV3(TestCmd):
                         pass
                 elif match == 3:  # "Connection closed"
                     TestCmd.test_error(self, "Client said 'connection closed'")
+                    break
                 elif match == 4:  # "Connection refused"
                     TestCmd.test_error(self, "Client said 'connection refused'")
-                elif match == 5:  # "Please wait"
-                    TestCmd.test_error(self, "Got 'Please wait'")
-                    timeout = 30
-                    continue
+                    break
                 elif match == 6:  # "Warning added RSA"
                     TestCmd.test_print(self,
                                        "Got 'Warning added RSA to known host list")
-                    continue
-                elif match == 9:  # prompt
-                    TestCmd.test_print(self, "Got shell prompt -- logged in")
                     break
             except aexpect.ExpectTimeoutError as e:
                 TestCmd.test_error(self, e.output)
@@ -292,30 +285,98 @@ class GuestSessionV3(TestCmd):
                         'Closed the guest session(%s).' % (self._ip))
         self._ssh.close()
 
-    def guest_cmd_output(self, cmd, timeout=300):
+    def guest_cmd_output_safe(self, cmd, timeout=300, verbose=True):
         output = ''
-        TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
-        output = self._ssh.cmd_output(cmd=cmd, timeout=timeout)
+        if verbose:
+            TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
+        output = self._ssh.cmd_output_safe(cmd=cmd, timeout=timeout)
         if not output:
             TestCmd.test_error(self,
                                'Failed to run \"%s\" under %s sec.'
                                % (cmd, timeout))
         # Here need to remove command echo and blank space again
         output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
-        TestCmd.test_print(self, output)
+        if verbose:
+            TestCmd.test_print(self, output)
         if re.findall(r'command not found', output) or re.findall(r'-bash', output):
             TestCmd.test_error(self, 'Command %s failed' % cmd)
         return output
 
-    def guest_system_dev(self, enable_output=True):
+    def guest_cmd_status_output(self, cmd, timeout=300, verbose=True):
+        output = ''
+        if verbose:
+            TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
+        output = self._ssh.cmd_status_output(cmd=cmd, timeout=timeout)
+        if not output:
+            TestCmd.test_error(self,
+                               'Failed to run \"%s\" under %s sec.'
+                               % (cmd, timeout))
+        # Here need to remove command echo and blank space again
+        output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
+        if verbose:
+            TestCmd.test_print(self, output)
+        if re.findall(r'command not found', output) or re.findall(r'-bash', output):
+            TestCmd.test_error(self, 'Command %s failed' % cmd)
+        return output
+
+    def guest_cmd_status(self, cmd, timeout=300, verbose=True):
+        output = ''
+        if verbose:
+            TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
+        output = self._ssh.cmd_status(cmd=cmd, timeout=timeout)
+        if not output:
+            TestCmd.test_error(self,
+                               'Failed to run \"%s\" under %s sec.'
+                               % (cmd, timeout))
+        # Here need to remove command echo and blank space again
+        output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
+        if verbose:
+            TestCmd.test_print(self, output)
+        if re.findall(r'command not found', output) or re.findall(r'-bash', output):
+            TestCmd.test_error(self, 'Command %s failed' % cmd)
+        return output
+
+    def guest_cmd_output(self, cmd, timeout=300, verbose=True):
+        output = ''
+        if verbose:
+            TestCmd.test_print(self, '[root@guest ~]# %s' % cmd)
+        output = self._ssh.cmd_output(cmd=cmd, timeout=timeout)
+        output = re.sub(r'^Last login.*\s+', '', output)
+        output = re.sub(r'\s*\[.*@.*~\]# ', '', output)
+        if not output:
+            TestCmd.test_error(self,
+                               'Failed to run \"%s\" under %s sec.'
+                               % (cmd, timeout))
+        # Here need to remove command echo and blank space again
+        output = TestCmd.remove_cmd_echo_blank_space(self, output=output, cmd=cmd)
+        if verbose:
+            TestCmd.test_print(self, output)
+        if re.findall(r'command not found', output) or re.findall(r'-bash', output):
+            TestCmd.test_error(self, 'Command %s failed' % cmd)
+        return output
+
+    def guest_system_dev(self, verbose=True):
         cmd = 'ls /dev/[svh]d*'
-        output = self.guest_cmd_output(cmd)
+        output = self.guest_cmd_output(cmd, verbose=verbose)
         system_dev = re.findall('/dev/[svh]d\w+\d+', output)[0]
         system_dev = system_dev.rstrip(string.digits)
-        if enable_output == True:
+        if verbose:
             info = 'system device : %s' % system_dev
             TestCmd.test_print(self, info=info)
         return system_dev, output
+
+    def get_data_disk(self, verbose=True):
+        data_disk = []
+        cmd = 'ls /dev/[svh]d*'
+        output = self.guest_cmd_output(cmd, verbose=True)
+        sys_dev, _ = self.guest_system_dev(verbose=False)
+        for dev in output.split('\n'):
+            if sys_dev not in dev:
+                data_disk.append(dev)
+        if verbose:
+            info = 'data disk : %s' % data_disk
+            TestCmd.test_print(self, info=info)
+        return data_disk
 
     def guest_ping_test(self, dst_ip, count):
         cmd_ping = 'ping %s -c %d' % (dst_ip, count)
@@ -328,3 +389,21 @@ class GuestSessionV3(TestCmd):
         output = self.guest_cmd_output(cmd)
         if re.findall(r'Call Trace:', output):
             TestCmd.test_error(self, 'Guest hit call trace')
+
+    def guest_get_disk_size(self, dev, verbose=True):
+        return self.guest_cmd_output(
+            'lsblk -s %s | sed -n \'2p\' | awk {\'print $4\'}' % dev, verbose)
+
+    def guest_create_parts(self, dev, num, fs_type='xfs', verbose=True):
+        self.guest_cmd_output(cmd='parted %s -s mklabel gpt'
+                                  % dev, verbose=verbose)
+        dev_size = re.findall(r"\d+\.?\d*", self.guest_get_disk_size(dev))[0]
+        offset_size = (int(dev_size) / num) * 1024
+        start = 1
+        end = offset_size
+        for i in range(0, num):
+            self.guest_cmd_output('parted %s -s mkpart primary %s %sMB %sMB'
+                                  % (dev, fs_type, start, end), verbose)
+            start = end
+            end = start + offset_size
+        self.guest_cmd_output('parted %s -s p' % dev)
