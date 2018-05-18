@@ -72,11 +72,7 @@ echo "dhclient" > /dev/ttyS0
 dhclient
 echo "get repo" > /dev/ttyS0
 cat > /etc/yum.repos.d/epel.repo << EOF
-[epel]
-name=Extra Packages for Enterprise Linux 7 - \$basearch
-baseurl=http://download.eng.pek2.redhat.com/pub/fedora/epel/7/\$basearch
-enabled=1
-gpgcheck=0
+# Please input your repos url.
 EOF
 echo "yum makecache" > /dev/ttyS0
 yum makecache
