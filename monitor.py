@@ -198,7 +198,6 @@ class RemoteMonitor(Test):
         done = False
         started = False
         end = False
-        expect_prompt = '~]#'
         deadline = time.time() + timeout
         while time.time() < deadline:
             output = self.rec_data(recv_timeout=recv_timeout,
@@ -207,12 +206,15 @@ class RemoteMonitor(Test):
                 started = True
                 allput = allput + output
             if started:
-                while 1:
+                while time.time() < deadline:
                     output = self.rec_data(recv_timeout=recv_timeout,
                                            max_recv_data=max_recv_data)
                     if shell_mode:
-                        if re.findall(r'~]#', allput) \
-                                or re.findall(r'Power down', allput):
+                        if 'shutdown' in cmd or 'init' in cmd or 'poweroff' in cmd:
+                            if re.findall(r'\[\s+\d+\.\d+\] Power down\.', allput):
+                                end = True
+                                break
+                        elif re.findall(r'\[\S+\s~\]# ', allput):
                             end = True
                             break
                     else:
@@ -229,6 +231,8 @@ class RemoteMonitor(Test):
             RemoteMonitor.test_error(self, err_info)
 
         allput = self.remove_cmd_echo_blank_space(cmd=cmd, output=allput)
+        if shell_mode:
+            allput = re.sub(r'\s*\[\S+\s~\]# \s*', '', allput)
 
         return  allput
 
@@ -316,6 +320,7 @@ class RemoteQMPMonitor(RemoteMonitor):
                                                      max_recv_data=max_recv_data)
             if verbose == True:
                 RemoteMonitor.test_print(self, output)
+        output = RemoteMonitor.remove_cmd_echo_blank_space(self, output, cmd)
         return output
 
     def qmp_system_powerdown(self, timeout=300):
@@ -348,7 +353,7 @@ class RemoteSerialMonitor(RemoteMonitor):
             RemoteMonitor.test_error(self,
                                      'Initialize serial monitor with invalid arguments.')
 
-    def prompt_password(self, output, recv_timeout=1,
+    def prompt_password(self, output, recv_timeout=0.1,
                         max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
                         sub_timeout=10):
         allput = ''
@@ -362,31 +367,31 @@ class RemoteSerialMonitor(RemoteMonitor):
             output = RemoteMonitor.rec_data(self,
                                             recv_timeout=recv_timeout,
                                             max_recv_data=max_recv_data,)
-            RemoteMonitor.test_print(self, info=output, serial_debug=True)
+        RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
         err_info = 'No prompt \"Pssword:\" under %s sec after type user.'\
                    % sub_timeout
         if real_logined == False:
             RemoteMonitor.test_error(self, err_info)
 
-    def prompt_shell(self, output, recv_timeout=1,
+    def prompt_shell(self, output, recv_timeout=0.1,
                      max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
-                     sub_timeout=10):
+                     timeout=60):
         allput = ''
-        end_time = time.time() + sub_timeout
+        end_time = time.time() + timeout
         real_logined = False
         while time.time() < float(end_time):
             allput = allput + output
-            if re.findall(r']#', allput):
+            if re.findall(r'\[\S+\s~\]# ', allput):
                 real_logined = True
                 break
             output = RemoteMonitor.rec_data(self,
                                             recv_timeout=recv_timeout,
                                             max_recv_data=max_recv_data,)
-            RemoteMonitor.test_print(self, info=output, serial_debug=True)
+        RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
         err_info = 'Failed to login under %s sec after type user and password.'\
-                   % sub_timeout
+                   % timeout
         if real_logined == False:
             RemoteMonitor.test_error(self, err_info)
 
@@ -454,9 +459,9 @@ class RemoteSerialMonitor(RemoteMonitor):
             allput = allput + output
             if re.findall(r'Call Trace:', allput):
                 RemoteQMPMonitor.test_error(self, 'Guest hit call trace')
-            if re.search(r"login:", allput):
+            if re.search(r"\s\S+ login:", allput):
                 break
-        if not output and not re.search(r"login:", allput):
+        if not output and not re.search(r"\s\S+ login:", allput):
             err_info = 'No prompt \"login:\" under %s sec' % timeout
             RemoteMonitor.test_error(self, err_info)
 
@@ -464,7 +469,7 @@ class RemoteSerialMonitor(RemoteMonitor):
     def serial_login(self, recv_timeout=RemoteMonitor.DATA_AVAILABLE_TIMEOUT,
                      login_recv_timeout=1,
                      max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
-                     ip_timeout=1, timeout=300):
+                     timeout=300):
         output = ''
         self.wait_for_login(timeout, recv_timeout, max_recv_data)
 
@@ -474,7 +479,7 @@ class RemoteSerialMonitor(RemoteMonitor):
 
         self.prompt_shell(output)
 
-        ip = self.serial_get_ip(ip_timeout=ip_timeout)
+        ip = self.serial_get_ip()
         return ip
 
     def serial_output(self, max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
@@ -538,26 +543,35 @@ class RemoteSerialMonitor(RemoteMonitor):
         output = RemoteMonitor.remove_cmd_echo_blank_space(self,
                                                            cmd=cmd,
                                                            output=output)
+        if 'dmesg' in cmd \
+                or 'shutdown' in cmd \
+                or 'halt' in cmd \
+                or 'init' in cmd \
+                or 'poweroff' in cmd \
+                or 'reboot' in cmd:
+            pass
+        else:
+            output = re.sub(r'\s*\[.*\.\d+\] .*\s*', '', output)
+
         if verbose == True:
             RemoteMonitor.test_print(self, info=output, serial_debug=True)
         if re.findall(r'command not found', output) \
                 or re.findall(r'-bash', output):
             RemoteMonitor.test_error(self, 'Command %s failed' % cmd)
+
         return output
 
-    def serial_get_ip(self, ip_timeout=1):
+    def serial_get_ip(self, timeout=10):
         ip = ''
         output = ''
-        cmd = "ifconfig | grep -E 'inet ' | awk '{ print $2}'"
-        output = self.serial_cmd_output(cmd, recv_timeout=ip_timeout)
+        cmd = "ip route | grep default | grep -Po '(?<=dev )(\S+)' " \
+              "| awk 'BEGIN{ RS = \"\" ; FS = \"\\n\" }{print $1}'"
+        interface = self.serial_cmd_output(cmd, timeout)
+        cmd = "ifconfig %s | grep -E 'inet ' | awk '{ print $2}'" % interface
+        output = self.serial_cmd_output(cmd, timeout)
         for ip in output.splitlines():
             ip = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", ip)[0]
-            if ip == '127.0.0.1':
-                continue
-            else:
-                if not ip:
-                    RemoteMonitor.test_error(self, 'Could not get ip address!')
-                return ip
+        return ip
 
     def serial_shutdown_vm_old(self, recv_timeout=3.0, timeout=600):
         time.sleep(5)
@@ -577,11 +591,8 @@ class RemoteSerialMonitor(RemoteMonitor):
             RemoteMonitor.test_error(
                 self, 'Failed to shutdown vm under %s sec.' % timeout)
 
-    def serial_shutdown_vm(self, timeout=600):
+    def serial_shutdown_vm(self, timeout=30):
         output = self.serial_cmd_output('shutdown -h now', timeout)
         if re.findall(r'Call Trace', output):
             RemoteMonitor.test_error(
                 self, 'Guest hit call trace.')
-        if not re.findall(r'Power down', output):
-            RemoteMonitor.test_error(
-                self, 'Failed to shutdown vm under %s sec.' % timeout)
