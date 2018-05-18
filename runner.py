@@ -254,21 +254,12 @@ class CaseRunner(object):
                                            int(self._sub_run_time -
                                                    int(self._sub_run_time / 60) * 60))
 
-            if float(self._sub_run_time) > float(int(self._params.get('timeout'))):
+            if float(self._sub_run_time) >= float(int(self._params.get('timeout'))):
                 sub_proc.terminate()
-                self._run_result['error_cases'].append(case)
-                self._run_result['case_time'][case] = self._case_time
-                self._timeout_info = 'Failed to run %s under %s sec.' \
+                self._timeout_info = 'Error: Failed to run %s under %s sec.' \
                                % (case, self._params.get('timeout'))
+                case_queue.put(case)
                 self.runner_log_file(case, self._timeout_info)
-                try:
-                    self.shutdown_quit_vm(case)
-                except:
-                    pass
-                self._error_info = '\n' + '===> ERROR: %s - %s ' \
-                                  % (case.upper().replace('_', '-'),
-                                     self._params.get('test_cases')[case]['name'])
-                self.runner_log_file(case, self._error_info)
 
             if not case_queue.empty():
                 self._run_result['error_cases'].append(case_queue.get())
@@ -278,14 +269,14 @@ class CaseRunner(object):
                     self.shutdown_quit_vm(case)
                 except:
                     pass
-                self._error_info = '\n' + '===> ERROR: %s - %s ' \
+                self._error_info = '===> ERROR: %s - %s ' \
                                   % (case.upper().replace('_', '-'),
                                      self._params.get('test_cases')[case]['name'])
                 self.runner_log_file(case, self._error_info)
             else:
                 self._run_result['pass_cases'].append(case)
                 self._run_result['case_time'][case] = self._case_time
-                self._pass_info = '\n' + '===> PASS: %s - %s ' \
+                self._pass_info = '===> PASS: %s - %s ' \
                                   % (case.upper().replace('_', '-'),
                                      self._params.get('test_cases')[case]['name'])
                 self.runner_log_file(case, self._pass_info)
