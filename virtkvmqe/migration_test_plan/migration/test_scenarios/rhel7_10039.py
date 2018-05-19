@@ -123,7 +123,7 @@ def run_case(params):
        test.test_error('Guest hit call trace')
 
     test.sub_step_log('Reboot guest')
-    dst_serial.serial_cmd_output('reboot')
+    dst_serial.serial_cmd('reboot')
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('Shut down dst guest and quit src qemu')
