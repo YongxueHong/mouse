@@ -101,20 +101,7 @@ def run_case(params):
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
         test.test_error('Failed to quit qemu on src host')
-    flag = False
-    end_time = time.time() + chk_timeout
-    while (time.time() < end_time):
-        src_chk_cmd = "ps -aux | grep %s | grep -vE 'grep|ssh'" \
-                      % guest_name
-        output = src_host_session.host_cmd_output(cmd=src_chk_cmd)
-        if output:
-            src_pid = re.split(r"\s+", output)[1]
-            src_host_session.host_cmd_output('kill -9 %s' % src_pid)
-        else:
-            flag = True
-            break
-    if (flag == False):
-        src_host_session.test_error('Failed to quit src qemu')
+    src_host_session.check_guest_process(src_ip=src_host_ip)
     params.vm_base_cmd_add('device', 'virtio-balloon-pci,id=balloon0,'
                                      'bus=pci.0,addr=0x9')
     src_qemu_cmd = params.create_qemu_cmd()

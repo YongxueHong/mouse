@@ -104,4 +104,4 @@ def run_case(params):
     test.sub_step_log('4.4. Reboot and then shutdown guest.')
     dst_serial.serial_cmd(cmd='reboot')
     dst_serial.serial_login()
-    dst_serial.serial_shutdown_vm(recv_timeout=1)
+    dst_serial.serial_shutdown_vm()

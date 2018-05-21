@@ -102,7 +102,7 @@ def run_case(params):
     output = dst_serial.serial_cmd_output(cmd=cmd)
     if re.findall(r'Call Trace:', output) or not output:
         test.test_error('Guest hit call trace')
-    dst_serial.serial_cmd_output(cmd='reboot')
+    dst_serial.serial_cmd(cmd='reboot')
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('4.3 Ping external host ')

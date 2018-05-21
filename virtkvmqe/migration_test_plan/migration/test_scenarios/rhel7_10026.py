@@ -59,19 +59,46 @@ def run_case(params):
         test.test_error('Migration timeout')
 
     test.main_step_log('5. After migration, check if guest works well')
-    end_time = time.time() + login_timeout
-    flag = False
-    while time.time() < end_time:
-        usr_output =  dst_serial.serial_cmd_output('root')
-        if re.findall(r'Password:', usr_output):
-            output = dst_serial.serial_cmd_output(guest_pwd)
-            if re.findall(r'Last login:', output):
-                dst_guest_ip = dst_serial.serial_get_ip()
-                flag = True
+    timeout = 600
+    endtime = time.time() + timeout
+    bootup = False
+    while time.time() < endtime:
+        cmd = 'root'
+        dst_serial.send_cmd(cmd)
+        output = dst_serial.rec_data(recv_timeout=8)
+        dst_serial.test_print(info=output, serial_debug=True)
+        if re.findall(r'Password', output):
+            dst_serial.send_cmd(guest_pwd)
+            dst_serial.test_print(guest_pwd, serial_debug=True)
+            output = dst_serial.rec_data(recv_timeout=8)
+            dst_serial.test_print(info=output, serial_debug=True)
+            if re.search(r"login:", output):
+                bootup = True
                 break
+            if re.findall(r'Login incorrect', output):
+                dst_serial.test_print(info='Try to login again.')
+                cmd = 'root'
+                dst_serial.send_cmd(cmd)
+                output = dst_serial.rec_data(recv_timeout=10)
+                dst_serial.test_print(info=output, serial_debug=True)
 
-    if (flag == False):
-        test.test_error('Destination login timeout')
+                dst_serial.send_cmd(guest_pwd)
+                dst_serial.test_print(guest_pwd, serial_debug=True)
+                output = dst_serial.rec_data(recv_timeout=10)
+                dst_serial.test_print(info=output, serial_debug=True)
+                if re.search(r"login:", output):
+                    bootup = True
+                    break
+    if bootup == False:
+        test.test_error('Guest boot up failed under %s sec' % timeout)
+
+    test.sub_step_log('check dmesg info')
+    cmd = 'dmesg'
+    output = dst_serial.serial_cmd_output(cmd=cmd)
+    if re.findall(r'Call Trace:', output) or not output:
+        test.test_error('Guest hit call trace')
+    dst_serial.serial_cmd(cmd='reboot')
+    dst_guest_ip = dst_serial.serial_login()
 
     dst_guest_session = GuestSession(case_id=id, params=params,ip=dst_guest_ip)
     test.sub_step_log('5.1 Guest mouse and keyboard')
@@ -79,26 +106,19 @@ def run_case(params):
     cmd_dd = 'dd if=/dev/zero of=file1 bs=1M count=100 oflag=direct'
     output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
     if not output or re.findall('error', output):
-        dst_serial.test_error('Failed to dd a file inside guest')
+        dst_guest_session.test_error('Failed to dd a file inside guest')
 
     test.sub_step_log('check dmesg info')
-    cmd = 'dmesg'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-        dst_guest_session.test_error('Guest hit call trace')
+    dst_guest_session.guest_dmesg_check()
 
     test.main_step_log('5.3 Reboot guest')
-    dst_guest_session.guest_cmd_output(cmd='reboot')
+    dst_serial.serial_cmd('reboot')
     dst_guest_ip = dst_serial.serial_login()
     dst_guest_session = GuestSession(case_id=id, params=params,ip=dst_guest_ip)
 
     test.sub_step_log('5.4. Ping external host / copy file '
                       'between guest and host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        dst_serial.test_error('Ping failed')
+    dst_guest_session.guest_ping_test(dst_ip='www.redhat.com', count=10)
 
     test.sub_step_log('5.5 Shutdown guest')
     dst_serial.serial_shutdown_vm()
@@ -106,3 +126,5 @@ def run_case(params):
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src end')
+
+        
