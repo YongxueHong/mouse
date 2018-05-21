@@ -4,7 +4,7 @@ from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-from utils_migration import do_migration, query_migration
+import utils_migration
 import threading
 
 def run_case(params):
@@ -17,8 +17,7 @@ def run_case(params):
     id = test.get_id()
     src_host_session = HostSession(id, params)
     speed = '1073741824'
-    chk_time_1 = 20
-    chk_time_2 = 1200
+    active_timeout = 300
     stress_time = 120
 
     test.main_step_log('1. Start VM with high load, with each method is ok')
@@ -65,26 +64,20 @@ def run_case(params):
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.sub_step_log('2.2. Do live migration from src to dst')
-    check_info = do_migration(remote_qmp=src_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=dst_host_ip,
-                              chk_timeout=chk_time_1)
+    cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%s"}}' % \
+          (dst_host_ip, incoming_port)
+    src_remote_qmp.qmp_cmd_output(cmd)
 
     test.main_step_log('3.Enlarge migration speed')
-    test.sub_step_log('3.1 enlarge migration speed if it is not finished in %d'
-                      % chk_time_1)
-    if (check_info == False):
-        test.test_print('Migration does not finish in %d seconds' % chk_time_1)
-        speed_cmd = '{"execute":"migrate-set-parameters","arguments":' \
-                    '{"max-bandwidth": %s}}' % speed
-        src_remote_qmp.qmp_cmd_output(cmd=speed_cmd)
-        paras_chk_cmd = '{"execute":"query-migrate-parameters"}'
-        output = src_remote_qmp.qmp_cmd_output(cmd=paras_chk_cmd)
-        if re.findall(r'"max-bandwidth": %s' % speed, output):
-            test.test_print('Change speed successfully')
-        else:
-            test.test_error('Failed to change speed')
+    flag_active = utils_migration.query_status(remote_qmp=src_remote_qmp,
+                                               status='active')
+    if (flag_active == False):
+        src_remote_qmp.test_error('Migration could not be active within %d'
+                                  % active_timeout)
+    utils_migration.change_speed(remote_qmp=src_remote_qmp, speed_val=speed)
+
     test.sub_step_log('3.2 Check migration status again')
-    flag_1 = query_migration(remote_qmp=src_remote_qmp,chk_timeout=chk_time_2)
+    flag_1 = utils_migration.query_migration(remote_qmp=src_remote_qmp)
     if (flag_1 == False):
         test.test_error('Migration timeout after changing speed')
 
@@ -101,12 +94,9 @@ def run_case(params):
     dst_guest_ip = dst_serial.serial_login()
 
     test.sub_step_log('4.3 Ping external host')
-    external_host_ip = 'www.redhat.com'
-    cmd_ping = 'ping %s -c 10' % external_host_ip
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_ping)
-    if re.findall(r'100% packet loss', output):
-        dst_guest_session.test_error('Ping failed')
+    dst_guest_session = GuestSession(case_id=id, params=params,
+                                     ip=dst_guest_ip)
+    dst_guest_session.guest_ping_test(dst_ip='www.redhat.com', count=10)
 
     test.sub_step_log('4.4 dd a file inside guest')
     cmd_dd = 'dd if=/dev/zero of=file1 bs=100M count=10 oflag=direct'
