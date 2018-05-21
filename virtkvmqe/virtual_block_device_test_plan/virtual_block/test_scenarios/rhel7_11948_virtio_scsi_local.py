@@ -1,5 +1,5 @@
 from utils_host import HostSession
-from utils_guest import GuestSession, GuestSessionV2
+from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 from vm import CreateTest
 import re

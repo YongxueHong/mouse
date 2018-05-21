@@ -14,8 +14,8 @@ class HostSession(TestCmd):
         self._src_ip = params.get('src_host_ip')
         super(HostSession, self).__init__(case_id=case_id, params=params)
 
-    def host_cmd(self, cmd, echo_cmd=True, timeout=600):
-        if echo_cmd == True:
+    def host_cmd(self, cmd, verbose=True, timeout=600):
+        if verbose:
             TestCmd.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -25,11 +25,11 @@ class HostSession(TestCmd):
                 err_info = 'Fail to run %s under %s sec.' % (cmd, timeout)
                 TestCmd.test_error(self, err_info)
 
-    def host_cmd_output(self, cmd, echo_cmd=True, verbose=True, timeout=600):
+    def host_cmd_output(self, cmd, verbose=True, timeout=600):
         output = ''
         errput = ''
         endtime = time.time() + timeout
-        if echo_cmd == True:
+        if verbose:
             TestCmd.test_print(self, '[root@host ~]# %s' % cmd)
         sub = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -49,7 +49,7 @@ class HostSession(TestCmd):
         allput = output + errput
         # Here need to remove command echo and blank space again
         allput = TestCmd.remove_cmd_echo_blank_space(self, output=allput, cmd=cmd)
-        if verbose == True:
+        if verbose:
             TestCmd.test_print(self, allput)
         if re.findall(r'command not found', allput):
             TestCmd.test_error(self, 'Fail to run %s.' % cmd)

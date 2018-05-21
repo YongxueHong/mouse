@@ -6,6 +6,7 @@ import usr_exceptions
 import threading
 import re
 import select
+import utils_misc
 
 
 class Test(object):
@@ -41,7 +42,11 @@ class Test(object):
             if os.path.exists(log_file):
                 try:
                     run_log = open(log_file, "a")
+                    if isinstance(log_str, int):
+                        log_str = str(log_str)
                     for line in log_str.splitlines():
+                        line = utils_misc.py2_to_unicode(line)
+                        line = utils_misc.py2_to_srt(line)
                         timestamp = time.strftime("%Y-%m-%d-%H:%M:%S")
                         run_log.write("%s: %s\n" % (timestamp, line))
 
@@ -190,14 +195,14 @@ class TestCmd(Test):
 
     def remove_cmd_echo_blank_space(self, output, cmd):
         if output:
+            output = re.sub(r'^Last login.*\s+', '', output)
+            output = re.sub(r'\s*\[.*@.*~\]# ', '', output)
             lines = output.splitlines()
             count = 0
             for line in lines:
 
                 if line == cmd or line == '\n' \
-                        or len(line) == 1 \
                         or len(line) == 0:
-
                     count = count + 1
                     lines.remove(line)
                     continue
