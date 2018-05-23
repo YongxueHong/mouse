@@ -12,52 +12,63 @@ def create_iso(host_session, disk_dir, iso):
         host_session.test_error('The format of %s disk is not raw' % iso)
         
 def configure_host_hugepage(host_session, matrix, dst_ip, mount_point):
+    chk_cmd_pg = 'cat /proc/meminfo | grep -i hugepage'
     if (matrix == 'P8_P9'):
-        cmd = 'echo 512 > /proc/sys/vm/nr_hugepages'
+        pg_count_p8 = '512'
+        pg_count_p9 = '8'
+        cmd = 'echo %s > /proc/sys/vm/nr_hugepages' % pg_count_p8
         host_session.host_cmd_output(cmd=cmd)
-        output = host_session.host_cmd_output(cmd='cat /proc/meminfo | grep -i hugepage')
-        if not re.findall(r'512', output):
+        output = host_session.host_cmd_output(cmd=chk_cmd_pg)
+        if not re.findall(r'%s' % pg_count_p8, output):
             host_session.test_error('Failed to configure hugepage of src host')
-        cmd = 'ssh root@%s "echo 8 > /proc/sys/vm/nr_hugepages"' % dst_ip
+        cmd = 'ssh root@%s "echo %s > /proc/sys/vm/nr_hugepages"' % (dst_ip, pg_count_p9)
         host_session.host_cmd_output(cmd=cmd)
-        cmd = 'ssh root@%s "cat /proc/meminfo | grep -i hugepage"' % dst_ip
+        cmd = 'ssh root@%s %s' % (dst_ip, chk_cmd_pg)
         output = host_session.host_cmd_output(cmd=cmd)
-        if not re.findall(r'8', output):
+        if not re.findall(r'%s' % pg_count_p9, output):
             host_session.test_error('Failed to configure hugepage of dst host')
         cmd = 'ssh root@%s ppc64_cpu --smt=off' % dst_ip
         host_session.host_cmd_output(cmd=cmd)
-        output = host_session.host_cmd_output(cmd='ssh root@%s ppc64_cpu --smt') % dst_ip
+        output = host_session.host_cmd_output(cmd='ssh root@%s ppc64_cpu --smt' % dst_ip)
         if not re.findall(r'SMT is off', output):
             host_session.test_error('Failed to configure smt of dst host')
         cmd = 'ssh root@%s "echo N > /sys/module/kvm_hv/parameters/indep_threads_mode"' % dst_ip
         host_session.host_cmd_output(cmd=cmd)
         cmd = 'ssh root@%s cat /sys/module/kvm_hv/parameters/indep_threads_mode' % dst_ip
-        output = host_session.host_cmd_output(cmd=cmd)
-        if not re.findall(r'N', output):
-            host_session.test_error('Failed to configure indep_threads_mode of dst host')
+        host_session.host_cmd_output(cmd=cmd)
+        # if not re.findall(r'N', output):
+        #     host_session.test_error('Failed to configure indep_threads_mode of dst host')
     elif (matrix == 'P8_P8'):
-        cmd = 'echo 512 > /proc/sys/vm/nr_hugepages'
-        host_session.host_cmd_output(cmd=cmd)
-        output = host_session.host_cmd_output(cmd='cat /proc/meminfo | grep -i hugepage')
-        if not re.findall(r'512', output):
+        pg_count = '512'
+        pg_cmd = 'echo %s > /proc/sys/vm/nr_hugepages' % pg_count
+        host_session.host_cmd_output(cmd=pg_cmd)
+        output = host_session.host_cmd_output(cmd=chk_cmd_pg)
+        if not re.findall(r'%s' % pg_count, output):
             host_session.test_error('Failed to configure hugepage of src host')
-        cmd = 'ssh root@%s "echo 512 > /proc/sys/vm/nr_hugepages"' % dst_ip
+        cmd = 'ssh root@%s "%s"' % (dst_ip, pg_cmd)
         host_session.host_cmd_output(cmd=cmd)
-        cmd = 'ssh root@%s cat /proc/meminfo | grep -i hugepage' % dst_ip
+        cmd = 'ssh root@%s %s' % (dst_ip, chk_cmd_pg)
         output = host_session.host_cmd_output(cmd=cmd)
-        if not re.findall(r'512', output):
+        if not re.findall(r'%s' % pg_count, output):
             host_session.test_error('Failed to configure hugepage of dst host')
     elif (matrix == 'P9_P9'):
-        cmd = 'echo 4096 > /proc/sys/vm/nr_hugepages'
-        host_session.host_cmd_output(cmd=cmd)
-        output = host_session.host_cmd_output(cmd='cat /proc/meminfo | grep -i hugepage')
-        if not re.findall(r'4096', output):
+        output = host_session.host_cmd_output(cmd=chk_cmd_pg)
+        if re.findall(r'1048576', output):
+            pg_count = '8'
+        elif re.findall(r'2048', output):
+            pg_count = '4096'
+        else:
+            host_session.test_error('hugepagesz of p9 is neither 2m nor 1g')
+        pg_cmd = 'echo %s > /proc/sys/vm/nr_hugepages' % pg_count
+        host_session.host_cmd_output(cmd=pg_cmd)
+        output = host_session.host_cmd_output(cmd=chk_cmd_pg)
+        if not re.findall(r'%s' % pg_count, output):
             host_session.test_error('Failed to configure hugepage of src host')
-        cmd = 'ssh root@%s "echo 4096 > /proc/sys/vm/nr_hugepages"' % dst_ip
+        cmd = 'ssh root@%s "%s"' % (dst_ip, pg_cmd)
         host_session.host_cmd_output(cmd=cmd)
-        cmd = 'ssh root@%s cat /proc/meminfo | grep -i hugepage' % dst_ip
+        cmd = 'ssh root@%s %s' % (dst_ip, chk_cmd_pg)
         output = host_session.host_cmd_output(cmd=cmd)
-        if not re.findall(r'4096', output):
+        if not re.findall(r'%s' % pg_count, output):
             host_session.test_error('Failed to configure hugepage of dst host')
 
     endtime = time.time() + 300
