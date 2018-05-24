@@ -141,7 +141,7 @@ class RemoteMonitor(Test):
                             % self._filename)
         self._socket.close()
 
-    def data_availabl(self, timeout=DATA_AVAILABLE_TIMEOUT):
+    def data_available(self, timeout=DATA_AVAILABLE_TIMEOUT):
         try:
             return bool(select.select([self._socket], [], [], timeout)[0])
         except socket.error:
@@ -168,7 +168,7 @@ class RemoteMonitor(Test):
         s = ''
         data = ''
         alldata = ''
-        while self.data_availabl(timeout=recv_timeout):
+        while self.data_available(timeout=recv_timeout):
             try:
                 data = self._socket.recv(max_recv_data)
             except socket.error:
@@ -355,7 +355,7 @@ class RemoteSerialMonitor(RemoteMonitor):
 
     def prompt_password(self, output, recv_timeout=0.1,
                         max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
-                        sub_timeout=10):
+                        sub_timeout=300):
         allput = ''
         end_time = time.time() + sub_timeout
         real_logined = False
@@ -402,7 +402,6 @@ class RemoteSerialMonitor(RemoteMonitor):
         output = RemoteMonitor.recv_data_timeout(self, cmd=cmd,
                                                  timeout=60,
                                                  recv_timeout=login_recv_timeout)
-        RemoteMonitor.test_print(self, info=output, serial_debug=True)
 
         self.prompt_password(output)
 
@@ -412,7 +411,6 @@ class RemoteSerialMonitor(RemoteMonitor):
         output = RemoteMonitor.recv_data_timeout(self, cmd=cmd,
                                                  timeout=60,
                                                  recv_timeout=login_recv_timeout)
-        RemoteMonitor.test_print(self, info=output, serial_debug=True)
         return output
 
     def try2login(self, output, login_recv_timeout, timeout=600):
@@ -470,7 +468,6 @@ class RemoteSerialMonitor(RemoteMonitor):
                      login_recv_timeout=1,
                      max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA,
                      timeout=300):
-        output = ''
         self.wait_for_login(timeout, recv_timeout, max_recv_data)
 
         output = self.first_login(login_recv_timeout)
