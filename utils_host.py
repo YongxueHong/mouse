@@ -55,6 +55,13 @@ class HostSession(TestCmd):
             TestCmd.test_error(self, 'Fail to run %s.' % cmd)
         return allput
 
+    def host_cmd_status(self, verbose=True, timeout=600):
+        return int(self.host_cmd_output('echo $?', verbose, timeout))
+
+    def host_cmd_status_output(self, cmd, verbose=True, timeout=600):
+        return (int(self.host_cmd_output('echo $?', verbose, timeout)),
+                self.host_cmd_output(cmd, verbose, timeout))
+
     def pexpect_scp_cmd(self, local_path, remote_path,
                         passwd, remote_ip, put=True, timeout=600):
         if put == True:

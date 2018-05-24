@@ -129,7 +129,7 @@ class IscsiInitiator(HostSession):
         cmd = 'iscsiadm --mode discovery --type sendtargets --portal %s' \
               % target_ip
         output = HostSession.host_cmd_output(self, cmd)
-        if HostSession.host_cmd_output(self, 'echo $?'):
+        if int(HostSession.host_cmd_output(self, 'echo $?')):
             HostSession.test_error(self, 'Failed to discovery iscsi target')
         target_list = re.findall('iqn.\d{4}-\d{2}.com..*:.*', output)
         if not target_list:
@@ -146,9 +146,9 @@ class IscsiInitiator(HostSession):
             ShellSession.test_error(self, 'Failed to start iscsid server.')
 
     def connect_iscsi_target(self, iqn):
-        output = HostSession.host_cmd_output(self, 'iscsiadm -m node -T %s -l'
+        status, output = HostSession.host_cmd_status_output(self, 'iscsiadm -m node -T %s -l'
                                              % iqn)
-        if 'successful' not in output:
+        if status:
             HostSession.test_error(self, 'Failed to login to target.')
 
     def disconnect_iscsi_target(self, iqn):
