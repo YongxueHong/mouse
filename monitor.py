@@ -4,6 +4,8 @@ import re
 import time
 from vm import Test
 from telnetlib import Telnet
+import utils_misc
+import json
 
 
 class TelnetMonitor(Test):
@@ -267,22 +269,14 @@ class RemoteQMPMonitor(RemoteMonitor):
                                      'Initialize qmp monitor with invalid arguments.')
         self.qmp_initial(recv_timeout, max_recv_data)
 
+
     def qmp_initial(self, recv_timeout, max_recv_data):
         cmd = '{"execute":"qmp_capabilities"}'
-        RemoteMonitor.test_print(self, cmd)
-        RemoteMonitor.send_cmd(self, cmd)
-        output = RemoteMonitor.rec_data(self,
-                                        recv_timeout=recv_timeout,
-                                        max_recv_data=max_recv_data)
-        RemoteMonitor.test_print(self, output)
-
+        self.qmp_cmd_output(cmd=cmd, recv_timeout=recv_timeout,
+                            max_recv_data=max_recv_data)
         cmd = '{"execute":"query-status"}'
-        RemoteMonitor.test_print(self, cmd)
-        RemoteMonitor.send_cmd(self, cmd)
-        output = RemoteMonitor.rec_data(self,
-                                        recv_timeout=recv_timeout,
-                                        max_recv_data=max_recv_data)
-        RemoteMonitor.test_print(self, output)
+        self.qmp_cmd_output(cmd=cmd, recv_timeout=recv_timeout,
+                            max_recv_data=max_recv_data)
 
     def qmp_cmd_output_old(self, cmd, echo_cmd=True, verbose=True,
                        recv_timeout=QMP_CMD_TIMEOUT,
@@ -304,22 +298,38 @@ class RemoteQMPMonitor(RemoteMonitor):
                 RemoteMonitor.test_print(self, output)
         return output
 
+    def _generate_qmp_cmd_id(self, cmd, id_len=8):
+        cmd_id = utils_misc.generate_random_string(id_len)
+        cmd = json.loads(cmd)
+        if not cmd.has_key('id'):
+            cmd['id'] = '%s' % cmd_id
+        id = cmd.get('id')
+        cmd = json.dumps(cmd)
+        return id, cmd
+
     def qmp_cmd_output(self, cmd, timeout=600, echo_cmd=True, verbose=True,
                        recv_timeout=QMP_CMD_TIMEOUT,
                        max_recv_data=RemoteMonitor.MAX_RECEIVE_DATA):
         output =''
+        id, cmd = self._generate_qmp_cmd_id(cmd, 8)
         if echo_cmd == True:
             RemoteMonitor.test_print(self, cmd)
         if re.search(r'quit', cmd):
             RemoteMonitor.send_cmd(self, cmd)
         else:
             RemoteMonitor.send_cmd(self, cmd)
-            output = RemoteMonitor.recv_data_timeout(self, cmd=cmd,
-                                                     timeout=timeout,
-                                                     recv_timeout=recv_timeout,
-                                                     max_recv_data=max_recv_data)
-            if verbose == True:
-                RemoteMonitor.test_print(self, output)
+            output = utils_misc.wait_for_keyword(
+                lambda : RemoteQMPMonitor.recv_data_timeout(self, cmd=cmd,
+                                                            timeout=60,
+                                                            recv_timeout=recv_timeout,
+                                                            max_recv_data=max_recv_data),
+                r'"id": "%s"' % id, timeout=timeout)
+            if output and verbose:
+                RemoteQMPMonitor.test_print(self,output)
+            elif not output:
+                RemoteMonitor.test_error(self,
+                                         'Failed to catch output of %s '
+                                         'under \'%s\'' % (id, timeout))
         output = RemoteMonitor.remove_cmd_echo_blank_space(self, output, cmd)
         return output
 
