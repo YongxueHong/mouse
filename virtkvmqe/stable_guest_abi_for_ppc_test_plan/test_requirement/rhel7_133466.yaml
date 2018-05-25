@@ -156,6 +156,10 @@ vm_cmd_base:
 test_cases:
  rhel7_110657:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.5.0\" machine type"
+ rhel7_110658:
+  name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.5.0\" machine type"
+ rhel_133480:
+  name: "[stable guest abi][powerpc]Boot up guest [installed on Source(old) Host] with \"-M pseries-rhel7.6.0\"machine type on Destination Host"
 
 # Set repeat times.
 repeat_times: '1'
