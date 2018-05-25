@@ -4,8 +4,7 @@ from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-import threading
-from utils_migration import query_migration
+import utils_migration
 
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
@@ -46,39 +45,7 @@ def run_case(params):
     test.main_step_log('3. Log in to the src guest and '
                        ' Do I/O operations load(iozone) in the guest')
     test.sub_step_log('run iozone -a')
-    cmd='yum list installed | grep ^gcc.`arch`'
-    output = src_guest_session.guest_cmd_output(cmd=cmd)
-    if not output:
-        output=src_guest_session.guest_cmd_output('yum install -y gcc')
-        if not re.findall(r'Complete!', output):
-            src_guest_session.test_error('gcc install Error')
-    output = src_guest_session.guest_cmd_output('cd /home/iozone3_471;cd src; '
-                                                'cd current;ls |grep -w iozone')
-    if re.findall(r'No such file or directory', output):
-        cmd = 'cd /home;wget http://www.iozone.org/src/current/iozone3_471.tar'
-        src_guest_session.guest_cmd_output(cmd=cmd)
-        time.sleep(10)
-        src_guest_session.guest_cmd_output('cd /home;tar -xvf iozone3_471.tar')
-        output = src_guest_session.guest_cmd_output('arch')
-        if re.findall(r'ppc64le', output):
-            cmd = 'cd /home/iozone3_471/src/current/;make linux-powerpc64'
-            src_guest_session.guest_cmd_output(cmd=cmd)
-        elif re.findall(r'x86_64', output):
-            cmd = 'cd /home/iozone3_471/src/current/;make linux-AMD64 '
-            src_guest_session.guest_cmd_output(cmd=cmd)
-        else:
-            cmd = 'cd /home/iozone3_471/src/current/;make linux-S390X '
-            src_guest_session.guest_cmd_output(cmd=cmd)
-    cmd = 'cd /home/iozone3_471/src/current/;./iozone -a'
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(cmd,1200,))
-    thread.name = 'iozone'
-    thread.daemon = True
-    thread.start()
-    time.sleep(5)
-    pid =src_guest_session.guest_cmd_output('pgrep -x iozone')
-    if not pid:
-        src_guest_session.test_error('iozone excute or install Error')
+    utils_migration.iozone_test(guest_session=src_guest_session)
 
     test.main_step_log('4. Migrate to the destination')
     cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%s"}}' % \
@@ -94,7 +61,7 @@ def run_case(params):
     cmd = '{"execute":"stop"}'
     src_remote_qmp.qmp_cmd_output(cmd)
     test.sub_step_log('Check the status of migration')
-    flag = query_migration(src_remote_qmp)
+    flag = utils_migration.query_migration(src_remote_qmp)
     if (flag == False):
         src_remote_qmp.test_error('migration timeout')
     

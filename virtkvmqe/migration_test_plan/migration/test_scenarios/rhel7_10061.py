@@ -4,8 +4,7 @@ from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-from utils_migration import do_migration, query_migration
-import threading
+import utils_migration
 
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
@@ -17,10 +16,6 @@ def run_case(params):
     id = test.get_id()
     guest_name = test.guest_name
     src_host_session = HostSession(id, params)
-    downtime = '20000'
-    speed = '1073741824'
-    chk_time_1 = 20
-    chk_time_2 = 1200
 
     test.main_step_log('1. Start VM in the src host, guest running stress')
     src_qemu_cmd = params.create_qemu_cmd()
@@ -33,26 +28,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params, ip=src_guest_ip)
 
     test.sub_step_log('1.2 Running stress in src guest')
-    chk_cmd = 'yum list installed | grep stress.`arch`'
-    output = src_guest_session.guest_cmd_output(cmd=chk_cmd)
-    if not output:
-        install_cmd = 'yum install -y stress.`arch`'
-        install_info = src_guest_session.guest_cmd_output(cmd=install_cmd)
-        if re.findall('Complete', install_info):
-            test.test_print('Guest install stress pkg successfully')
-        else:
-            test.test_error('Guest failed to install stress pkg')
-
-    stress_cmd = 'stress --cpu 4 --vm 4 --vm-bytes 256M'
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(stress_cmd, 1200))
-    thread.name = 'stress'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = src_guest_session.guest_cmd_output('pgrep -x stress')
-    if not output:
-        test.test_error('Stress is not running in guest')
+    utils_migration.stress_test(guest_session=src_guest_session)
 
     test.main_step_log('2. Start listening mode in the dst host.')
     incoming_val = 'tcp:0:%s' % incoming_port
@@ -68,18 +44,10 @@ def run_case(params):
     src_remote_qmp.qmp_cmd_output(cmd=cmd)
 
     test.sub_step_log('Check the status of migration')
-    flag_active = False
-    cmd = '{"execute":"query-migrate"}'
-    end_time = time.time() + chk_time_1
-    while time.time() < end_time:
-        output = src_remote_qmp.qmp_cmd_output(cmd=cmd)
-        if re.findall('"status": "active"', output):
-            flag_active = True
-            break
-        elif re.findall(r'"status": "failed"', output):
-            src_remote_qmp.test_error('migration failed')
+    flag_active = utils_migration.query_status(remote_qmp=src_remote_qmp,
+                                               status='active')
     if (flag_active == False):
-        test.test_error('Migration is not active within %d' % chk_time_1)
+        test.test_error('Migration is not active')
 
     test.main_step_log('4. During migration in progress, cancel migration')
     cmd = '{"execute":"migrate_cancel"}'
@@ -108,8 +76,9 @@ def run_case(params):
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
 
     test.main_step_log('6. Do live migration again')
-    output = do_migration(remote_qmp=src_remote_qmp,
-                        migrate_port=incoming_port, dst_ip=dst_host_ip)
+    output = utils_migration.do_migration(remote_qmp=src_remote_qmp,
+                                          migrate_port=incoming_port,
+                                          dst_ip=dst_host_ip)
     if (output == False):
         test.test_error('Migration timeout')
 

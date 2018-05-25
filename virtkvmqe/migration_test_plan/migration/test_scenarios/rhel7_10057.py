@@ -3,15 +3,9 @@ from utils_host import HostSession
 from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
-import os
 import time
-import threading
 from vm import CreateTest
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname
-                                           (os.path.dirname
-                                            (os.path.dirname
-                                             (os.path.abspath(__file__))))))
+import utils_migration
 
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
@@ -22,7 +16,6 @@ def run_case(params):
 
     test = CreateTest(case_id='rhel7_10057', params=params)
     id = test.get_id()
-    guest_passwd = params.get('guest_passwd')
     downtime = '30000'
     script = 'migration_dirtypage_1.c'
     query_timeout = 2400
@@ -59,43 +52,9 @@ def run_case(params):
     test.main_step_log('3. src guest have '
                        'programme running to generate dirty page')
     test.sub_step_log('run dirty page script')
-    test.test_print('scp %s to guest' % script)
-    src_guest_session.guest_cmd_output('cd /home;rm -f %s' % script)
-    src_host_session.host_cmd_scp_put(local_path='%s/c_scripts/%s'
-                                                 % (BASE_DIR, script),
-                                      remote_path='/home/%s' % script,
-                                      passwd=guest_passwd,
-                                      remote_ip=src_guest_ip, timeout=300)
-    chk_cmd = 'ls /home | grep -w "%s"' % script
-    output = src_guest_session.guest_cmd_output(cmd=chk_cmd)
-    if not output:
-        test.test_error('Failed to get %s' % script)
-    arch = src_guest_session.guest_cmd_output('arch')
-    gcc_cmd = 'yum list installed | grep -w "gcc.%s"' % arch
-    output = src_guest_session.guest_cmd_output(cmd=gcc_cmd)
-    if not re.findall(r'gcc.%s' % arch, output):
-        install_cmd = 'yum install -y gcc'
-        install_info = src_guest_session.guest_cmd_output(install_cmd)
-        if re.findall('Complete', install_info):
-            test.test_print('Guest install gcc pkg successfully')
-        else:
-            test.test_error('Guest failed to install gcc pkg')
-    compile_cmd = 'cd /home;gcc %s -o dirty1' % script
-    src_guest_session.guest_cmd_output(cmd=compile_cmd)
-    output = src_guest_session.guest_cmd_output('ls /home | grep -w "dirty1"')
-    if not output:
-        test.test_error('Failed to compile %s' % script)
-
-    dirty_cmd = 'cd /home;./dirty1'
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(dirty_cmd, 4800))
-    thread.name = 'dirty1'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = src_guest_session.guest_cmd_output('pgrep -x dirty1')
-    if not output:
-        test.test_error('Dirty1 is not running in guest')
+    utils_migration.dirty_page_test(host_session=src_host_session,
+                                    guest_session=src_guest_session,
+                                    guest_ip=src_guest_ip, script=script)
 
     test.main_step_log('4. Migrate to the destination')
     cmd = '{"execute":"migrate", "arguments": {"uri": "tcp:%s:%s"}}' % \
