@@ -102,7 +102,10 @@ vm_cmd_base:
 test_cases:
  rhel7_10022_win:
   name: "[migration] Migrate guest via a compressed file -- Windows guest"
-
+ rhel7_10056_win:
+  name: "[migration] Set migration speed(max-bandwidth) after migration begins  -- Windows guest"
+ rhel7_10057_win:
+  name: "[migration] Set migration downtime after migration begins  -- Windows guest"
 # Set repeat times.
 repeat_times: '1'
 
