@@ -3,6 +3,8 @@ import time
 from monitor import RemoteQMPMonitor
 import re
 import threading
+import json
+import utils_misc
 
 def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout_1=180,
                  chk_timeout_2=1200, downtime_val='20000',
@@ -16,7 +18,6 @@ def do_migration(remote_qmp, migrate_port, dst_ip, chk_timeout_1=180,
         change_downtime(remote_qmp=remote_qmp, downtime_val=downtime_val)
         change_speed(remote_qmp=remote_qmp, speed_val=speed_val)
         ret = query_migration(remote_qmp=remote_qmp, chk_timeout=chk_timeout_2)
-
     return ret
 
 def query_migration(remote_qmp, interval=5, chk_timeout=1200):
@@ -38,8 +39,6 @@ def query_status(remote_qmp, status, interval=1, chk_timeout=300):
         output = remote_qmp.qmp_cmd_output(cmd=cmd)
         if re.findall(r'"status": "%s"' % status, output):
             return True
-        elif re.findall(r'"remaining": 0', output):
-            remote_qmp.test_error('migration is already completed')
         elif re.findall(r'"status": "failed"', output):
             remote_qmp.test_error('migration failed')
         time.sleep(interval)
@@ -174,6 +173,46 @@ def ping_pong_migration(params, id, src_host_session, src_remote_qmp,
 
     return src_remote_qmp, dst_remote_qmp
 
+def set_migration_capabilities(remote_qmp, capabilities, state):
+    set_capabilities = '{"execute":"migrate-set-capabilities","arguments":' \
+                       '{"capabilities":[{"capability":"%s","state":%s}]}}' \
+                       % (capabilities, state)
+    check_capabilities = '{"execute":"query-migrate-capabilities"}'
+    remote_qmp.qmp_cmd_output(cmd=set_capabilities)
+    output = remote_qmp.qmp_cmd_output(cmd=check_capabilities)
+    if re.findall(r'"state": %s, "capability": "%s"' % (state, capabilities), output):
+        remote_qmp.test_print('Succeed to set migration capabilities: %s'
+                              % capabilities)
+    else:
+        remote_qmp.test_error('Failed to set migration capabilities: %s'
+                              % capabilities)
+
+def switch_to_postcopy(remote_qmp, query_dirty_timeout=600, interval=5,
+                       dirty_count_threshold=1):
+    cmd = '{"execute":"query-migrate"}'
+    end_time = time.time() + query_dirty_timeout
+    flag = False
+    while time.time() < end_time:
+        output = remote_qmp.qmp_cmd_output(cmd=cmd)
+        if re.findall(r'"status": "failed"', output):
+            remote_qmp.test_error('migration failed')
+        elif re.findall(r'"remaining": 0', output):
+            remote_qmp.test_error('Migration is already completed')
+        else:
+            output = json.loads(output)
+            dirty_sync_count = int(output.get('return').get('ram')
+                                   .get('dirty-sync-count'))
+            json.dumps(output)
+            if (dirty_sync_count > dirty_count_threshold):
+                flag = True
+                break
+            time.sleep(interval)
+    if flag == False:
+        remote_qmp.test_error('dirty-sync-count is not lager than %d within %d'
+                              % (dirty_count_threshold, query_dirty_timeout))
+    cmd = '{"execute":"migrate-start-postcopy"}'
+    remote_qmp.qmp_cmd_output(cmd=cmd)
+
 def change_balloon_val(new_value, remote_qmp, query_timeout=300,
                        qmp_timeout=5):
     remote_qmp.sub_step_log('Change the value of balloon to %s bytes'
@@ -214,7 +253,7 @@ def filebench_test(guest_session, run_time=60, recv_timeout=600):
     output = guest_session.guest_cmd_output(cmd=cmd_filebench, timeout=recv_timeout)
     if re.findall(r'Running', output):
         guest_session.test_print('Succeed to execute filebench')
-    elif not output:
+    elif not output or re.findall(r'Failed', output):
         guest_session.test_error('Failed to execute filebench')
 
 def stress_test(guest_session, run_time=120):
@@ -227,16 +266,11 @@ def stress_test(guest_session, run_time=120):
             guest_session.test_print('Guest install stress pkg successfully')
         else:
             guest_session.test_error('Guest failed to install stress pkg')
-
-    stress_cmd = 'stress --cpu 4 --vm 4 --vm-bytes 256M --timeout %d' % run_time
-    thread = threading.Thread(target=guest_session.guest_cmd_output,
-                              args=(stress_cmd, 1200))
-    thread.name = 'stress'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = guest_session.guest_cmd_output('pgrep -x stress')
-    if not output:
+    stress_cmd = 'stress --cpu 4 --vm 4 --vm-bytes 256M --timeout %d > ' \
+                 '/dev/null &' % run_time
+    guest_session.guest_cmd_output(stress_cmd)
+    if not utils_misc.wait_for_output(lambda: guest_session.
+            guest_cmd_output('pgrep -x stress'), 30):
         guest_session.test_error('Stress is not running in guest')
 
 def dirty_page_test(host_session, guest_session, guest_ip, script):
@@ -266,16 +300,10 @@ def dirty_page_test(host_session, guest_session, guest_ip, script):
     output = guest_session.guest_cmd_output('ls /home | grep -w "dirty_page"')
     if not output:
         guest_session.test_error('Failed to compile %s' % script)
-
-    dirty_cmd = 'cd /home;./dirty_page'
-    thread = threading.Thread(target=guest_session.guest_cmd_output,
-                              args=(dirty_cmd, 4800))
-    thread.name = 'dirty_page'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = guest_session.guest_cmd_output('pgrep -x dirty_page')
-    if not output:
+    dirty_cmd = 'cd /home;./dirty_page > /dev/null &'
+    guest_session.guest_cmd_output(dirty_cmd)
+    if not utils_misc.wait_for_output(lambda: guest_session.
+            guest_cmd_output('pgrep -x dirty_page'), 30):
         guest_session.test_error('Dirty_page program is not running in guest')
 
 def iozone_test(guest_session):
@@ -302,16 +330,11 @@ def iozone_test(guest_session):
         else:
             cmd = 'cd /home/iozone3_471/src/current/;make linux-S390X '
             guest_session.guest_cmd_output(cmd=cmd)
-    cmd = 'cd /home/iozone3_471/src/current/;./iozone -a'
-    thread = threading.Thread(target=guest_session.guest_cmd_output,
-                              args=(cmd,1200,))
-    thread.name = 'iozone'
-    thread.daemon = True
-    thread.start()
-    time.sleep(5)
-    pid = guest_session.guest_cmd_output('pgrep -x iozone')
-    if not pid:
-        guest_session.test_error('iozone excute or install Error')
+    cmd = 'cd /home/iozone3_471/src/current/;./iozone -a > /dev/null &'
+    guest_session.guest_cmd_output(cmd)
+    if not utils_misc.wait_for_output(lambda: guest_session.
+            guest_cmd_output('pgrep -x iozone'), 30):
+        guest_session.test_error('Iozone program is not running in guest')
 
 def create_disk(host_session, disk_dir, disk_name, disk_format, disk_size):
     cmd = 'ls %s | grep %s.%s' % (disk_dir, disk_name, disk_format)
