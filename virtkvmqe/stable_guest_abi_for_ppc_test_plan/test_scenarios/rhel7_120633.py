@@ -27,7 +27,7 @@ def run_case(params):
     disk5_format = params.get('disk5_name').split('.')[1]
     iso = params.get('cdrom1_name')
 
-    test = CreateTest(case_id='rhel7_110657', params=params)
+    test = CreateTest(case_id='rhel7_120633', params=params)
     id = test.get_id()
     src_host_session = HostSession(id, params)
     test.test_print('=======Create test environment=======')
@@ -78,9 +78,9 @@ def run_case(params):
                        'following devices')
     if (flag == 'p9_to_p8'):
         params.vm_base_cmd_update('machine', 'pseries',
-                                  'pseries-rhel7.5.0,max-cpu-compat=power8')
+                                  'pseries-rhel7.3.0,max-cpu-compat=power8')
     else:
-        params.vm_base_cmd_update('machine', 'pseries', 'pseries-rhel7.5.0')
+        params.vm_base_cmd_update('machine', 'pseries', 'pseries-rhel7.3.0')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
 
@@ -92,12 +92,12 @@ def run_case(params):
     test.sub_step_log('2 Start guest on Destination Host  host with same '
                       'qemu cli as step1 but appending')
     if (flag == 'p8_to_p9'):
-        params.vm_base_cmd_update('machine', 'pseries-rhel7.5.0',
-                                  'pseries-rhel7.5.0,max-cpu-compat=power8')
+        params.vm_base_cmd_update('machine', 'pseries-rhel7.3.0',
+                                  'pseries-rhel7.3.0,max-cpu-compat=power8')
     elif (flag == 'p9_to_p8'):
         params.vm_base_cmd_update('machine',
-                                  'pseries-rhel7.5.0,max-cpu-compat=power8',
-                                  'pseries-rhel7.5.0')
+                                  'pseries-rhel7.3.0,max-cpu-compat=power8',
+                                  'pseries-rhel7.3.0')
     incoming_val = 'tcp:0:%s' % incoming_port
     params.vm_base_cmd_add('incoming', incoming_val)
     params.vm_base_cmd_update('chardev', 'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
@@ -140,11 +140,11 @@ def run_case(params):
 
     if (flag == 'p8_to_p9'):
         params.vm_base_cmd_update('machine',
-                                  'pseries-rhel7.5.0,max-cpu-compat=power8',
-                                  'pseries-rhel7.5.0')
+                                  'pseries-rhel7.3.0,max-cpu-compat=power8',
+                                  'pseries-rhel7.3.0')
     elif (flag == 'p9_to_p8'):
-        params.vm_base_cmd_update('machine', 'pseries-rhel7.5.0',
-                                  'pseries-rhel7.5.0,max-cpu-compat=power8')
+        params.vm_base_cmd_update('machine', 'pseries-rhel7.3.0',
+                                  'pseries-rhel7.3.0,max-cpu-compat=power8')
     params.vm_base_cmd_update('chardev', 'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
                               % (dst_host_ip, serial_port),
                               'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
@@ -171,5 +171,4 @@ def run_case(params):
     test.sub_step_log('b.Check block by the following methods')
     utils_migration.filebench_test(src_guest_session)
     test.sub_step_log('c.Check VNC console and check keyboard by input keys')
-
 
