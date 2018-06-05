@@ -4,8 +4,7 @@ from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-from utils_migration import do_migration
-import threading
+import utils_migration
 
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
@@ -19,7 +18,6 @@ def run_case(params):
     downtime = 10000
     speed = 52428800
     speed_m = speed / 1024 / 1024
-    stress_time = 120
     gap_speed = 5
     gap_downtime = 5000
 
@@ -35,27 +33,7 @@ def run_case(params):
                                       ip=src_guest_ip)
 
     test.main_step_log('2. Running some application inside guest')
-    chk_cmd = 'yum list installed | grep stress.`arch`'
-    output = src_guest_session.guest_cmd_output(cmd=chk_cmd)
-    if not output:
-        install_cmd = 'yum install -y stress.`arch`'
-        install_info = src_guest_session.guest_cmd_output(cmd=install_cmd)
-        if re.findall('Complete', install_info):
-            test.test_print('Guest install stress pkg successfully')
-        else:
-            test.test_error('Guest failed to install stress pkg')
-
-    stress_cmd = 'stress --cpu 4 --vm 4 --vm-bytes 256M --timeout %d' \
-                 % stress_time
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(stress_cmd, 1200))
-    thread.name = 'stress'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = src_guest_session.guest_cmd_output('pgrep -x stress')
-    if not output:
-        test.test_error('Stress is not running in guest')
+    utils_migration.stress_test(guest_session=src_guest_session)
 
     test.main_step_log('3. Boot up the guest on destination host')
     incoming_val = 'tcp:0:%s' % incoming_port
@@ -82,8 +60,9 @@ def run_case(params):
         test.test_error('Failed to change downtime and speed')
 
     test.main_step_log('5. Migrate guest from source host to destination host')
-    check_info = do_migration(remote_qmp=src_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=dst_host_ip)
+    check_info = utils_migration.do_migration(remote_qmp=src_remote_qmp,
+                                              migrate_port=incoming_port,
+                                              dst_ip=dst_host_ip)
     if (check_info == False):
         test.test_error('Migration timeout')
 

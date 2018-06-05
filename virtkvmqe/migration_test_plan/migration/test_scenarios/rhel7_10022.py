@@ -56,15 +56,7 @@ def run_case(params):
         test.test_error('Migration timeout')
 
     src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
-    time.sleep(3)
-    src_chk_cmd = 'ps -aux | grep %s | grep -vE grep' % guest_name
-    output = src_host_session.host_cmd_output(cmd=src_chk_cmd,
-                                              echo_cmd=False,
-                                              verbose=False)
-    if output:
-        src_pid = re.split(r"\s+", output)[1]
-        src_host_session.host_cmd_output('kill -9 %s' % src_pid,
-                                         echo_cmd=False)
+    src_host_session.check_guest_process(src_ip=src_host_ip)
 
     test.main_step_log('3. Load the file in dest host(src host).')
     params.vm_base_cmd_add('incoming', '"exec: gzip -c -d %s"' % statefile)

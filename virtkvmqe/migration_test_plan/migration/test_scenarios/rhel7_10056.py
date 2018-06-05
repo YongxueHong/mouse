@@ -5,7 +5,6 @@ from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
 import utils_migration
-import threading
 
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
@@ -18,7 +17,6 @@ def run_case(params):
     src_host_session = HostSession(id, params)
     speed = '1073741824'
     active_timeout = 300
-    stress_time = 120
 
     test.main_step_log('1. Start VM with high load, with each method is ok')
     src_qemu_cmd = params.create_qemu_cmd()
@@ -31,27 +29,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params, ip=src_guest_ip)
 
     test.sub_step_log('1.2 Running stress in src guest')
-    chk_cmd = 'yum list installed | grep stress.`arch`'
-    output = src_guest_session.guest_cmd_output(cmd=chk_cmd)
-    if not output:
-        install_cmd = 'yum install -y stress.`arch`'
-        install_info = src_guest_session.guest_cmd_output(cmd=install_cmd)
-        if re.findall('Complete', install_info):
-            test.test_print('Guest install stress pkg successfully')
-        else:
-            test.test_error('Guest failed to install stress pkg')
-
-    stress_cmd = 'stress --cpu 4 --vm 4 --vm-bytes 256M --timeout %d' \
-                 % stress_time
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(stress_cmd, 1200))
-    thread.name = 'stress'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = src_guest_session.guest_cmd_output('pgrep -x stress')
-    if not output:
-        test.test_error('Stress is not running in guest')
+    utils_migration.stress_test(guest_session=src_guest_session)
 
     test.main_step_log('2. Start listening mode on dst host and '
                        'on src host do migration')

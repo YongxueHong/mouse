@@ -4,8 +4,7 @@ from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-from utils_migration import do_migration
-import threading
+import utils_migration
 
 def run_case(params):
     src_host_ip = params.get('src_host_ip')
@@ -16,8 +15,6 @@ def run_case(params):
     test = CreateTest(case_id='rhel7_10067', params=params)
     id = test.get_id()
     src_host_session = HostSession(id, params)
-    iozone_url = 'http://www.iozone.org/src/current/iozone3_471.tar'
-    iozone_ver = 'iozone3_471'
     downtime = '10000'
     query_migration_time = 1200
 
@@ -32,45 +29,7 @@ def run_case(params):
     src_guest_session = GuestSession(case_id=id, params=params, ip=src_guest_ip)
 
     test.sub_step_log('1.2 Running iozone in src guest')
-    cmd='yum list installed | grep ^gcc.`arch`'
-    output = src_guest_session.guest_cmd_output(cmd=cmd)
-    if not output:
-        output=src_guest_session.guest_cmd_output('yum install -y gcc')
-        if not re.findall(r'Complete!', output):
-            src_guest_session.test_error('gcc install Error')
-
-    src_guest_session.guest_cmd_output('rm -rf /home/iozone*')
-    src_guest_session.guest_cmd_output('cd /home;wget %s' % iozone_url)
-    output = src_guest_session.guest_cmd_output('ls /home | grep %s.tar'
-                                                % iozone_ver)
-    if not output:
-        test.test_error('Failed to get iozone file')
-    time.sleep(10)
-    src_guest_session.guest_cmd_output('cd /home; tar -xvf %s.tar'
-                                       % iozone_ver)
-    arch = src_guest_session.guest_cmd_output('arch')
-    if re.findall(r'ppc64le', arch):
-        cmd = 'cd /home/%s/src/current/;make linux-powerpc64' % iozone_ver
-        src_guest_session.guest_cmd_output(cmd=cmd)
-    elif re.findall(r'x86_64', arch):
-        cmd = 'cd /home/%s/src/current/;make linux-AMD64' % iozone_ver
-        src_guest_session.guest_cmd_output(cmd=cmd)
-    elif re.findall(r'S390X', arch):
-        cmd = 'cd /home/%s/src/current/;make linux-S390X' % iozone_ver
-        src_guest_session.guest_cmd_output(cmd=cmd)
-    time.sleep(5)
-    iozone_cmd = 'cd /home/%s/src/current/;./iozone -a' % iozone_ver
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(iozone_cmd,1200))
-    thread.name = 'iozone'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    pid =src_guest_session.guest_cmd_output('pgrep -x iozone')
-    if pid:
-        src_guest_session.test_print('iozone is running in guest')
-    else:
-        src_guest_session.test_error('iozone is not running in guest')
+    utils_migration.iozone_test(guest_session=src_guest_session)
 
     test.main_step_log('2. Start listening mode')
     incoming_val = 'tcp:0:%s' % incoming_port
@@ -92,9 +51,10 @@ def run_case(params):
         test.test_error('Failed to change downtime')
 
     test.main_step_log('4.Do live migration')
-    check_info = do_migration(remote_qmp=src_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=dst_host_ip,
-                              chk_timeout_2=query_migration_time)
+    check_info = utils_migration.do_migration(remote_qmp=src_remote_qmp,
+                                              migrate_port=incoming_port,
+                                              dst_ip=dst_host_ip,
+                                              chk_timeout_2=query_migration_time)
     if (check_info == False):
         test.test_error('Migration timeout after changing downtime')
 

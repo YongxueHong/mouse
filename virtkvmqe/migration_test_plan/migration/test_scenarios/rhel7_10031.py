@@ -1,10 +1,9 @@
-import time
 from utils_host import HostSession
 from utils_guest import GuestSession
 from monitor import RemoteSerialMonitor, RemoteQMPMonitor
 import re
 from vm import CreateTest
-import threading
+import utils_misc
 from utils_migration import do_migration
 
 def run_case(params):
@@ -89,16 +88,11 @@ def run_case(params):
     src_guest_session.guest_cmd_output('fio -v')
     cmd = 'fio --filename=%s --direct=1 ' \
           '--rw=randrw --bs=512 --runtime=600 ' \
-          '--name=test --iodepth=1 --ioengine=libaio' % fio_dev
-    thread = threading.Thread(target=src_guest_session.guest_cmd_output,
-                              args=(cmd, 1200,))
-    thread.name = 'fio'
-    thread.daemon = True
-    thread.start()
-    time.sleep(10)
-    output = src_guest_session.guest_cmd_output('pgrep -x fio')
-    if not output:
-        test.test_error('fio is not running inside guest')
+          '--name=test --iodepth=1 --ioengine=libaio > /dev/null &' % fio_dev
+    src_guest_session.guest_cmd_output(cmd=cmd)
+    if not utils_misc.wait_for_output(lambda: src_guest_session.
+            guest_cmd_output('pgrep -x fio'), 30):
+        src_guest_session.test_error('fio is not running inside guest')
 
     test.main_step_log('4. Migrate to the destination')
     check_info = do_migration(src_remote_qmp, incoming_port, dst_host_ip)
