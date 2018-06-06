@@ -62,10 +62,6 @@ qmp_port: '3333'
 # Set the guest serial port.
 serial_port: '4444'
 
-# Set filename for spapr-vty connect
-src_nc : '/console1'
-dst_nc : '/console2'
-
 # Set qemu base command line.
 vm_cmd_base:
  name:
@@ -143,8 +139,6 @@ vm_cmd_base:
   - 'None'
  qmp:
   - 'tcp:0:{qmp_port},server,nowait'
-# serial:
-#  - 'tcp:0:{serial_port},server,nowait'
  monitor:
   - 'stdio'
  watchdog:
@@ -160,14 +154,22 @@ test_cases:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.3.0\" machine type"
  rhel7_110657:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.5.0\" machine type"
+ rhel_134144:
+  name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.5.0-sxxm\" machine type"
  rhel7_109697:
   name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.3.0\" machine type"
  rhel7_110658:
   name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.5.0\" machine type"
+ rhel_134145:
+  name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.5.0-sxxm\" machine type"
  rhel7_110037:
   name: "[stable guest abi][powerpc]Boot up guest [installed on Source(old) Host] with \"-M pseries-rhel7.5.0\"machine type on Destination Host"
+ rhel_134245:
+  name: "[stable guest abi][powerpc]Boot up guest [installed on Source(old) Host] with \"-M pseries-rhel7.5.0-sxxm\"machine type on Destination Host"
  rhel_133480:
   name: "[stable guest abi][powerpc]Boot up guest [installed on Source(old) Host] with \"-M pseries-rhel7.6.0\"machine type on Destination Host"
+# rhel_134246:
+#  name: "[stable guest abi][powerpc]Boot up guest [installed on Source(old) Host] with \"-M pseries-rhel7.6.0-sxxm\"machine type on Destination Host"
 
 # Set repeat times.
 repeat_times: '1'
