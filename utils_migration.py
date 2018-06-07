@@ -25,7 +25,7 @@ def query_migration(remote_qmp, interval=5, chk_timeout=1200):
     end_time = time.time() + chk_timeout
     while time.time() < end_time:
         output = remote_qmp.qmp_cmd_output(cmd=cmd)
-        if re.findall(r'"remaining": 0', output):
+        if re.findall(r'"status": "completed"', output):
             return True
         elif re.findall(r'"status": "failed"', output):
             remote_qmp.test_error('migration failed')
@@ -194,11 +194,7 @@ def switch_to_postcopy(remote_qmp, query_dirty_timeout=600, interval=5,
     flag = False
     while time.time() < end_time:
         output = remote_qmp.qmp_cmd_output(cmd=cmd)
-        if re.findall(r'"status": "failed"', output):
-            remote_qmp.test_error('migration failed')
-        elif re.findall(r'"remaining": 0', output):
-            remote_qmp.test_error('Migration is already completed')
-        else:
+        if re.findall(r'"status": "active"',output):
             output = json.loads(output)
             dirty_sync_count = int(output.get('return').get('ram')
                                    .get('dirty-sync-count'))
@@ -206,7 +202,13 @@ def switch_to_postcopy(remote_qmp, query_dirty_timeout=600, interval=5,
             if (dirty_sync_count > dirty_count_threshold):
                 flag = True
                 break
-            time.sleep(interval)
+        elif re.findall(r'"status": "failed"', output):
+            remote_qmp.test_error('migration failed')
+        elif re.findall(r'"status": "completed"', output):
+            remote_qmp.test_error('Migration is already completed')
+        else:
+            remote_qmp.test_error('Migration status is not active, failed or completed')
+        time.sleep(interval)
     if flag == False:
         remote_qmp.test_error('dirty-sync-count is not lager than %d within %d'
                               % (dirty_count_threshold, query_dirty_timeout))
@@ -360,4 +362,35 @@ def create_disk(host_session, disk_dir, disk_name, disk_format, disk_size):
     else:
         host_session.test_error('The format of %s disk is not %s'
                                 % (disk_name, disk_format))
+
+def stressapptest(guest_session, val_M, val_s):
+    cmd = 'yum list installed | grep git.`arch`'
+    output = guest_session.guest_cmd_output(cmd=cmd)
+    if not output:
+        guest_session.guest_cmd_output(cmd='yum install -y git')
+        if not re.findall(r'Complete!', output):
+            guest_session.test_error('git install Error')
+    cmd = 'yum list installed | grep gcc-c++.`arch`'
+    output = guest_session.guest_cmd_output(cmd=cmd)
+    if not output:
+        guest_session.guest_cmd_output(cmd='yum install -y git')
+        if not re.findall(r'Complete!', output):
+            guest_session.test_error('gcc-c++ install Error')
+
+    cmd = 'stressapptest --help'
+    output = guest_session.guest_cmd_output(cmd=cmd)
+    if re.findall(r'command not found', output):
+        guest_session.guest_cmd_output(cmd='rm -rf /home/stressapptest')
+        guest_session.guest_cmd_output(cmd='cd /home; git clone https://github.com/'
+                                       'stressapptest/stressapptest.git')
+        guest_session.guest_cmd_output('cd /home/stressapptest; '
+                                       './configure; make; make install')
+        output = guest_session.guest_cmd_output(cmd=cmd)
+        if re.findall(r'command not found', output):
+            guest_session.test_error('Failed to install stressapptest')
+    cmd = 'stressapptest -M %s -s %s > /dev/null &' % (val_M, val_s)
+    guest_session.guest_cmd_output(cmd)
+    if not utils_misc.wait_for_output(lambda: guest_session.
+            guest_cmd_output('pgrep -x stressapptest'), 30):
+        guest_session.test_error('stressapptest process is not running in guest')
 
