@@ -106,6 +106,9 @@ test_cases:
   name: "[migration] Set migration speed(max-bandwidth) after migration begins  -- Windows guest"
  rhel7_10057_win:
   name: "[migration] Set migration downtime after migration begins  -- Windows guest"
+ rhel7_10075_win:
+  name: "[migration] Live migration via unix protocol   -- Windows guest"
+
 # Set repeat times.
 repeat_times: '1'
 
