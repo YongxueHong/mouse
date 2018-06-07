@@ -17,6 +17,7 @@ def run_case(params):
     src_host_session = HostSession(id, params)
     speed = 52428800
     speed_m = speed / 1024 / 1024
+    downtime = 300
     gap_speed = 5
 
     test.main_step_log('1. Start a VM on source host')
@@ -50,7 +51,8 @@ def run_case(params):
 
     test.main_step_log('4. On source host, check the migration status')
     check_info = do_migration(remote_qmp=src_remote_qmp,
-                              migrate_port=incoming_port, dst_ip=dst_host_ip)
+                              migrate_port=incoming_port, dst_ip=dst_host_ip,
+                              downtime_val=downtime, speed_val=speed)
     if (check_info == False):
         test.test_error('Migration timeout')
 
