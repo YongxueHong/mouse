@@ -572,10 +572,9 @@ class RemoteSerialMonitor(RemoteMonitor):
     def serial_get_ip(self, timeout=10):
         ip = ''
         output = ''
-        cmd = "ip route | grep default | grep -Po '(?<=dev )(\S+)' " \
-              "| awk 'BEGIN{ RS = \"\" ; FS = \"\\n\" }{print $1}'"
+        cmd = "ip route | grep default | awk '{print $5}'"
         interface = self.serial_cmd_output(cmd, timeout)
-        cmd = "ifconfig %s | grep -E 'inet ' | awk '{ print $2}'" % interface
+        cmd = "ifconfig %s | grep -E 'inet ' | awk '{print $2}'" % interface
         output = self.serial_cmd_output(cmd, timeout)
         for ip in output.splitlines():
             ip = re.findall(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", ip)[0]
