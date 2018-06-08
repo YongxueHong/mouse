@@ -1,8 +1,7 @@
 from __future__ import division
 import time
 from utils_host import HostSession
-from utils_guest import GuestSession
-from monitor import RemoteSerialMonitor, RemoteQMPMonitor
+from monitor import RemoteQMPMonitor
 import re
 from vm import CreateTest
 import utils_migration
@@ -17,8 +16,8 @@ def run_case(params):
     id = test.get_id()
     src_host_session = HostSession(id, params)
     downtime = 10000
-    speed = 52428800
-    speed_m = speed / 1024 / 1024
+    speed_m = 20
+    speed = speed_m * 1024 * 1024
     gap_speed = 5
     gap_downtime = 5000
 
@@ -27,14 +26,9 @@ def run_case(params):
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
     src_remote_qmp = RemoteQMPMonitor(id, params, src_host_ip, qmp_port)
 
-    test.sub_step_log('1.1 Connecting to src serial')
-    src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
-    src_guest_ip = src_serial.serial_login()
-    src_guest_session = GuestSession(case_id=id, params=params,
-                                      ip=src_guest_ip)
+    test.sub_step_log('1.1 Connecting to src serial --- ignore for windows guest')
 
-    test.main_step_log('2. Running some application inside guest')
-    utils_migration.stress_test(guest_session=src_guest_session)
+    test.main_step_log('2. Running some application inside guest --- ignore for windows guest')
 
     test.main_step_log('3. Boot up the guest on destination host')
     incoming_val = 'tcp:0:%s' % incoming_port
@@ -43,8 +37,8 @@ def run_case(params):
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, dst_host_ip, qmp_port)
-    dst_serial = RemoteSerialMonitor(id, params, dst_host_ip, serial_port)
-
+    test.sub_step_log('Wait 90s for guest boot up')
+    time.sleep(90)
     test.main_step_log('4.Set  the migration speed and downtime')
     downtime_cmd = '{"execute":"migrate-set-parameters","arguments":' \
                    '{"downtime-limit": %d}}' % downtime
@@ -80,8 +74,8 @@ def run_case(params):
     speed_cal = transferred_ram_cal / total_time_cal
     gap_cal = abs(speed_cal - speed_m)
     if (gap_cal >= gap_speed):
-        test.test_error('The real migration speed and expected speed '
-                        'have a gap more than %d M/s' % gap_speed)
+        test.test_error('The real migration speed %s M/s and expected speed '
+                        'have a gap more than %d M/s' % (speed_cal, gap_speed))
     else:
         test.test_print('The real migration speed is not more or less than '
                         'expected speed by %d M/s' % gap_speed)
@@ -96,26 +90,24 @@ def run_case(params):
                         'expected downtime by %d milliseconds' % gap_downtime)
 
     test.main_step_log('7.After migration finished, check the status of guest')
-    test.sub_step_log('7.1 Reboot guest')
-    test.sub_step_log('check dmesg info')
-    cmd = 'dmesg'
-    output = dst_serial.serial_cmd_output(cmd=cmd)
-    if re.findall(r'Call Trace:', output) or not output:
-       test.test_error('Guest hit call trace')
+    test.sub_step_log('4.1 Check dst guest status')
+    status = dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
+    if '\"status\": \"running\"' not in status:
+        dst_remote_qmp.test_error('Dst vm is not running')
 
-    dst_serial.serial_cmd(cmd='reboot')
-    dst_guest_ip = dst_serial.serial_login()
-
-    test.sub_step_log('7.2 DD a file inside guest')
-    dst_guest_session = GuestSession(case_id=id, params=params, ip=dst_guest_ip)
-    cmd_dd = 'dd if=/dev/zero of=file1 bs=100M count=10 oflag=direct'
-    output = dst_guest_session.guest_cmd_output(cmd=cmd_dd, timeout=600)
-    if not output or re.findall('error', output):
-        test.test_error('Failed to dd a file in guest')
-
-    test.sub_step_log('7.3 Shutdown guest')
-    dst_serial.serial_shutdown_vm()
+    test.sub_step_log('4.2. Reboot guest')
+    dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
     if output:
         src_remote_qmp.test_error('Failed to quit qemu on src end')
+
+    time.sleep(30)
+    status = dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
+    if '\"status\": \"running\"' not in status:
+        dst_remote_qmp.test_error('Dst vm is not running after reboot')
+
+    output = dst_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
+    if output:
+        dst_remote_qmp.test_error('Failed to quit qemu on dst end')
+

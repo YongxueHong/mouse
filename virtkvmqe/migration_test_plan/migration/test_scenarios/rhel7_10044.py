@@ -15,6 +15,7 @@ def run_case(params):
     test = CreateTest(case_id='rhel7_10044', params=params)
     id = test.get_id()
     src_host_session = HostSession(id, params)
+    speed = 33554432
     downtime = 10000
     gap_downtime = 5000
     script = 'migration_dirtypage_2.c'
@@ -58,7 +59,9 @@ def run_case(params):
     test.main_step_log('4. Do live migration.')
     check_info = utils_migration.do_migration(remote_qmp=src_remote_qmp,
                                               migrate_port=incoming_port,
-                                              dst_ip=dst_host_ip)
+                                              dst_ip=dst_host_ip,
+                                              downtime_val=downtime,
+                                              speed_val=speed)
     if (check_info == False):
         test.test_error('Migration timeout')
 
