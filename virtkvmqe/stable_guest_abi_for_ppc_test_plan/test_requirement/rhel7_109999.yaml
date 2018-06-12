@@ -152,12 +152,16 @@ test_cases:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.2.0\" machine type"
  rhel7_120633:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.3.0\" machine type"
+ rhel_135045:
+  name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.3.0-sxxm\" machine type"
  rhel7_110657:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.5.0\" machine type"
  rhel_134144:
   name: "[stable guest abi][powerpc]forward and backward migration with \"-M pseries-rhel7.5.0-sxxm\" machine type"
  rhel7_109697:
   name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.3.0\" machine type"
+ rhel_135046:
+  name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.3.0-sxxm\" machine type"
  rhel7_110658:
   name: "[stable guest abi][powerpc]forward and backward postcopy migration with \"-M pseries-rhel7.5.0\" machine type"
  rhel_134145:

@@ -85,9 +85,9 @@ def run_case(params):
                               'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
                               % (dst_host_ip, serial_port))
     if (matrix == 'P8_P9'):
-        cmd = 'ssh root@%s uname -r' % dst_host_ip
+        cmd = 'ssh root@%s lscpu' % dst_host_ip
         output = src_host_session.host_cmd_output(cmd=cmd)
-        if re.findall(r'el7a', output):
+        if re.findall(r'POWER9', output):
             params.vm_base_cmd_update('machine', 'pseries',
                                   'pseries-rhel7.6.0-sxxm,max-cpu-compat=power8')
         else:
