@@ -27,7 +27,7 @@ def run_case(params):
     disk5_format = params.get('disk5_name').split('.')[1]
     iso = params.get('cdrom1_name')
 
-    test = CreateTest(case_id='rhel_134145', params=params)
+    test = CreateTest(case_id='rhel_135045', params=params)
     id = test.get_id()
     src_host_session = HostSession(id, params)
     test.test_print('=======Create test environment=======')
@@ -53,8 +53,7 @@ def run_case(params):
                                 disk_format=disk5_format, disk_size=2048)
 
     test.sub_step_log('~~~~2. Create 1 iso~~~~')
-    utils_stable_abi_ppc.create_iso(host_session=src_host_session,
-                                    disk_dir=share_images_dir, iso=iso)
+    utils_stable_abi_ppc.create_iso(host_session=src_host_session, disk_dir=share_images_dir, iso=iso)
 
     test.sub_step_log('~~~~3. Configure host hugepage~~~~')
     utils_stable_abi_ppc.configure_host_hugepage(host_session=src_host_session,
@@ -69,65 +68,45 @@ def run_case(params):
                        'following devices')
     if (flag == 'p9_to_p8'):
         params.vm_base_cmd_update('machine', 'pseries',
-                                  'pseries-rhel7.5.0-sxxm,max-cpu-compat=power8')
+                                  'pseries-rhel7.3.0-sxxm,max-cpu-compat=power8')
     else:
-        params.vm_base_cmd_update('machine', 'pseries', 'pseries-rhel7.5.0-sxxm')
+        params.vm_base_cmd_update('machine', 'pseries', 'pseries-rhel7.3.0-sxxm')
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
 
     test.sub_step_log('1.1 Connecting to src serial')
-    src_remote_qmp = RemoteQMPMonitor(id, params, ip=src_host_ip, port=qmp_port)
     src_serial = RemoteSerialMonitor(id, params, ip=src_host_ip, port=serial_port)
-    src_guest_ip = src_serial.serial_login()
+    src_serial.serial_login()
+    src_remote_qmp = RemoteQMPMonitor(id, params, ip=src_host_ip, port=qmp_port)
 
     test.sub_step_log('2 Start guest on Destination Host  host with same '
                       'qemu cli as step1 but appending')
     if (flag == 'p8_to_p9'):
-        params.vm_base_cmd_update('machine', 'pseries-rhel7.5.0-sxxm',
-                                  'pseries-rhel7.5.0-sxxm,max-cpu-compat=power8')
+        params.vm_base_cmd_update('machine', 'pseries-rhel7.3.0-sxxm',
+                                  'pseries-rhel7.3.0-sxxm,max-cpu-compat=power8')
     elif (flag == 'p9_to_p8'):
         params.vm_base_cmd_update('machine',
-                                  'pseries-rhel7.5.0-sxxm,max-cpu-compat=power8',
-                                  'pseries-rhel7.5.0-sxxm')
+                                  'pseries-rhel7.3.0-sxxm,max-cpu-compat=power8',
+                                  'pseries-rhel7.3.0-sxxm')
     incoming_val = 'tcp:0:%s' % incoming_port
     params.vm_base_cmd_add('incoming', incoming_val)
-    params.vm_base_cmd_update('chardev', 'socket,id=serial_id_serial0,host=%s,'
-                                         'port=%s,server,nowait' % (src_host_ip,
-                                                                    serial_port),
-                              'socket,id=serial_id_serial0,host=%s,port=%s,'
-                              'server,nowait' % (dst_host_ip, serial_port))
+    params.vm_base_cmd_update('chardev', 'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
+                              % (src_host_ip, serial_port),
+                              'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
+                              % (dst_host_ip, serial_port))
     dst_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_remote_guest(cmd=dst_qemu_cmd, ip=dst_host_ip,
                                        vm_alias='dst')
     dst_remote_qmp = RemoteQMPMonitor(id, params, ip=dst_host_ip, port=qmp_port)
 
-    test.main_step_log('3.In guest, execute the program to generate dirty pages')
-    src_guest_session = GuestSession(case_id=id, params=params,
-                                     ip=src_guest_ip)
-    utils_migration.dirty_page_test(host_session=src_host_session,
-                                    guest_session=src_guest_session,
-                                    guest_ip=src_guest_ip,
-                                    script='migration_dirtypage_2.c')
-
-    test.main_step_log('4.Enable postcopy on both sides and do migration')
-    utils_migration.set_migration_capabilities(remote_qmp=src_remote_qmp,
-                                               capabilities='postcopy-ram',
-                                               state='true')
-    utils_migration.set_migration_capabilities(remote_qmp=dst_remote_qmp,
-                                               capabilities='postcopy-ram',
-                                               state='true')
-    cmd = '{"execute":"migrate", "arguments": { "uri": "tcp:%s:%s" }}'\
-          % (dst_host_ip, incoming_port)
-    src_remote_qmp.qmp_cmd_output(cmd=cmd)
-
-    test.main_step_log('5.check the migration status, after generating dirty '
-                       'pages, change to postcopy mode')
-    utils_migration.switch_to_postcopy(remote_qmp=src_remote_qmp)
-    chk_info = utils_migration.query_migration(remote_qmp=src_remote_qmp)
-    if chk_info == False:
+    test.main_step_log('3. Migrate guest from Source Host host to Destination'
+                       ' Host  host')
+    check_info = utils_migration.do_migration(remote_qmp=src_remote_qmp,
+                              migrate_port=incoming_port, dst_ip=dst_host_ip)
+    if (check_info == False):
         test.test_error('Migration timeout')
 
-    test.main_step_log('6.Check devices function one by one')
+    test.main_step_log('4.Check devices function one by one')
     dst_serial = RemoteSerialMonitor(id, params, ip=dst_host_ip, port=serial_port)
     output = dst_serial.serial_cmd_output('dmesg')
     if re.findall(r'Call Trace:', output):
@@ -143,48 +122,32 @@ def run_case(params):
     test.sub_step_log('c.Check VNC console and check keyboard by input keys')
     time.sleep(3)
 
-    test.main_step_log('7.Migrate the guest back to src host and please '
-                       'refer to step 4 and step 5')
-    src_remote_qmp.qmp_cmd_output('{"execute":"quit"}')
+    test.main_step_log('5.Migrate the guest back to Source Host host and '
+                       'please refer to step 3')
+    src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
     time.sleep(3)
     src_host_session.check_guest_process(src_ip=src_host_ip)
 
     if (flag == 'p8_to_p9'):
         params.vm_base_cmd_update('machine',
-                                  'pseries-rhel7.5.0-sxxm,max-cpu-compat=power8',
-                                  'pseries-rhel7.5.0-sxxm')
+                                  'pseries-rhel7.3.0-sxxm,max-cpu-compat=power8',
+                                  'pseries-rhel7.3.0-sxxm')
     elif (flag == 'p9_to_p8'):
-        params.vm_base_cmd_update('machine', 'pseries-rhel7.5.0-sxxm',
-                                  'pseries-rhel7.5.0-sxxm,max-cpu-compat=power8')
-    params.vm_base_cmd_update('chardev', 'socket,id=serial_id_serial0,host=%s,'
-                                         'port=%s,server,nowait' % (dst_host_ip,
-                                                                    serial_port),
-                              'socket,id=serial_id_serial0,host=%s,port=%s,'
-                              'server,nowait' % (src_host_ip, serial_port))
+        params.vm_base_cmd_update('machine', 'pseries-rhel7.3.0-sxxm',
+                                  'pseries-rhel7.3.0-sxxm,max-cpu-compat=power8')
+    params.vm_base_cmd_update('chardev', 'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
+                              % (dst_host_ip, serial_port),
+                              'socket,id=serial_id_serial0,host=%s,port=%s,server,nowait'
+                              % (src_host_ip, serial_port))
     src_qemu_cmd = params.create_qemu_cmd()
     src_host_session.boot_guest(cmd=src_qemu_cmd, vm_alias='src')
     src_remote_qmp = RemoteQMPMonitor(id, params, ip=src_host_ip, port=qmp_port)
-
-    utils_migration.dirty_page_test(host_session=src_host_session,
-                                    guest_session=dst_guest_session,
-                                    guest_ip=dst_guest_ip,
-                                    script='migration_dirtypage_2.c')
-
-    utils_migration.set_migration_capabilities(remote_qmp=dst_remote_qmp,
-                                               capabilities='postcopy-ram',
-                                               state='true')
-    utils_migration.set_migration_capabilities(remote_qmp=src_remote_qmp,
-                                               capabilities='postcopy-ram',
-                                               state='true')
-    cmd = '{"execute":"migrate", "arguments": { "uri": "tcp:%s:%s" }}'\
-          % (src_host_ip, incoming_port)
-    dst_remote_qmp.qmp_cmd_output(cmd=cmd)
-    utils_migration.switch_to_postcopy(remote_qmp=dst_remote_qmp)
-    chk_info = utils_migration.query_migration(remote_qmp=dst_remote_qmp)
-    if chk_info == False:
+    check_info = utils_migration.do_migration(remote_qmp=dst_remote_qmp,
+                              migrate_port=incoming_port, dst_ip=src_host_ip)
+    if (check_info == False):
         test.test_error('Migration timeout')
 
-    test.main_step_log('8.Repeat step6')
+    test.main_step_log('6.Repeat step 4')
     src_serial = RemoteSerialMonitor(id, params, src_host_ip, serial_port)
     output = src_serial.serial_cmd_output('dmesg')
     if re.findall(r'Call Trace:', output):
@@ -198,4 +161,5 @@ def run_case(params):
     test.sub_step_log('b.Check block by the following methods')
     utils_migration.filebench_test(src_guest_session)
     test.sub_step_log('c.Check VNC console and check keyboard by input keys')
+
 

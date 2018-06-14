@@ -62,18 +62,8 @@ def run_case(params):
                                                  mount_point='/mnt/kvm_hugepage')
 
     test.sub_step_log('~~~~4. Check matrix~~~~')
-    flag = ''
-    if (matrix == 'P8_P9'):
-        check_src_cmd = 'uname -r'
-        check_dst_cmd = 'ssh root@%s %s' % (dst_host_ip, check_src_cmd)
-        src_kernel = src_host_session.host_cmd_output(cmd=check_src_cmd)
-        dst_kernel = src_host_session.host_cmd_output(cmd=check_dst_cmd)
-        if not re.findall(r'el7a', src_kernel) and re.findall(r'el7a', dst_kernel):
-            flag = 'p8_to_p9'
-        elif re.findall(r'el7a', src_kernel) and not re.findall(r'el7a', dst_kernel):
-            flag = 'p9_to_p8'
-        else:
-            test.test_error('This matrix maybe is not P8_P9')
+    flag = utils_stable_abi_ppc.check_matrix(host_session=src_host_session,
+                                             dst_ip=dst_host_ip, matrix=matrix)
 
     test.main_step_log('1. start guest on Source Host  host must have '
                        'following devices')

@@ -18,16 +18,16 @@ def configure_host_hugepage(host_session, matrix, dst_ip, mount_point):
         pg_count_p9 = '8'
         src = ''
         dst = ''
-        chk_src_kernel = 'uname -r'
-        chk_dst_kernel = 'ssh root@%s %s' % (dst_ip, chk_src_kernel)
-        src_kernel = host_session.host_cmd_output(cmd=chk_src_kernel)
-        dst_kernel = host_session.host_cmd_output(cmd=chk_dst_kernel)
-        if re.findall(r'el7a', src_kernel) and not re.findall(r'el7a', dst_kernel):
+        chk_src_cpu = 'lscpu'
+        chk_dst_cpu = 'ssh root@%s %s' % (dst_ip, chk_src_cpu)
+        src_cpu = host_session.host_cmd_output(cmd=chk_src_cpu)
+        dst_cpu = host_session.host_cmd_output(cmd=chk_dst_cpu)
+        if re.findall(r'POWER9', src_cpu) and not re.findall(r'POWER9', dst_cpu):
             src = 'p9'
             pg_count_src = pg_count_p9
             dst = 'p8'
             pg_count_dst = pg_count_p8
-        elif re.findall(r'el7a', dst_kernel) and not re.findall(r'el7a', src_kernel):
+        elif re.findall(r'POWER9', dst_cpu) and not re.findall(r'POWER9', src_cpu):
             src = 'p8'
             pg_count_src = pg_count_p8
             dst = 'p9'
@@ -121,6 +121,18 @@ def configure_host_hugepage(host_session, matrix, dst_ip, mount_point):
         else:
             break
 
-
-
+def check_matrix(host_session, dst_ip, matrix):
+    flag = ''
+    if (matrix == 'P8_P9'):
+        check_src_cmd = 'lscpu'
+        check_dst_cmd = 'ssh root@%s %s' % (dst_ip, check_src_cmd)
+        src_cpu = host_session.host_cmd_output(cmd=check_src_cmd)
+        dst_cpu = host_session.host_cmd_output(cmd=check_dst_cmd)
+        if not re.findall(r'POWER9', src_cpu) and re.findall(r'POWER9', dst_cpu):
+            flag = 'p8_to_p9'
+        elif re.findall(r'POWER9', src_cpu) and not re.findall(r'POWER9', dst_cpu):
+            flag = 'p9_to_p8'
+        else:
+            host_session.test_error('This matrix maybe is not P8_P9')
+    return flag
 
