@@ -107,7 +107,9 @@ test_cases:
  rhel7_10057_win:
   name: "[migration] Set migration downtime after migration begins  -- Windows guest"
  rhel7_10075_win:
-  name: "[migration] Live migration via unix protocol   -- Windows guest"
+  name: "[migration] Live migration via unix protocol  -- Windows guest"
+ rhel7_10061_win:
+  name: "[migration] Cancel a migration process with \"migration_cancel\" command  -- Windows guest"
 
 # Set repeat times.
 repeat_times: '1'

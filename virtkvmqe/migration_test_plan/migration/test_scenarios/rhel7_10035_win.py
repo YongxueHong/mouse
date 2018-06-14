@@ -90,12 +90,12 @@ def run_case(params):
                         'expected downtime by %d milliseconds' % gap_downtime)
 
     test.main_step_log('7.After migration finished, check the status of guest')
-    test.sub_step_log('4.1 Check dst guest status')
+    test.sub_step_log('7.1 Check dst guest status')
     status = dst_remote_qmp.qmp_cmd_output('{"execute":"query-status"}')
     if '\"status\": \"running\"' not in status:
         dst_remote_qmp.test_error('Dst vm is not running')
 
-    test.sub_step_log('4.2. Reboot guest')
+    test.sub_step_log('7.2 Reboot guest')
     dst_remote_qmp.qmp_cmd_output('{"execute":"system_reset"}')
 
     output = src_remote_qmp.qmp_cmd_output('{"execute":"quit"}', recv_timeout=3)
