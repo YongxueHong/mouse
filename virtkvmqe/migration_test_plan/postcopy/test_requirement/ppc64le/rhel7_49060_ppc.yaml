@@ -102,8 +102,14 @@ vm_cmd_base:
 test_cases:
  rhel7_49062:
   name: "[postcopy] Live migration with postcopy mode-two scenario(simpler stress/high stress)"
+ rhel7_58670:
+  name: "[postcopy] Cancel migration during the precopy phase"
+ rhel7_58672:
+  name: "[postcopy] Source should recovers when fail the destination during the precopy phase"
  rhel7_85702:
   name: "[postcopy] Post-copy migration with XBZRLE compression	"
+ rhel7_93722:
+  name: "[postcopy] Postcopy migration with Numa pinned and Hugepage pinned guest ---ppc only"
 
 # Set repeat times.
 repeat_times: '1'
