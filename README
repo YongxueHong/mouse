@@ -1,4 +1,4 @@
-#This tool is only for internel ppc team.
+#IPA(internal power automation) is only for ppc team.
 The structure of this tool is same with that of polarion, the requirement id
 and case id are same with polarion requirement id and case id, for example:
 ==>mouse-->virtkvmqe-->migration_test_plan-->migration-->test_requirement
