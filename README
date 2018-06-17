@@ -1,9 +1,9 @@
 #IPA(internal power automation) is only for ppc team.
 The structure of this tool is same with that of polarion, the requirement id
 and case id are same with polarion requirement id and case id, for example:
-==>mouse-->virtkvmqe-->migration_test_plan-->migration-->test_requirement
+==>ipa-->virtkvmqe-->migration_test_plan-->migration-->test_requirement
 -->ppc64le-->rhel7_58700.yaml
-==>mouse-->virtkvmqe-->migration_test_plan-->migration-->test_scenarios
+==>ipa-->virtkvmqe-->migration_test_plan-->migration-->test_scenarios
 -->rhel7_10022.py
 
 I. Firstly, create test environment
