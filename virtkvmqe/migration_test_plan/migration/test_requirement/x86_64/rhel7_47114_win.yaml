@@ -102,6 +102,12 @@ vm_cmd_base:
 test_cases:
  rhel7_10022_win:
   name: "[migration] Migrate guest via a compressed file -- Windows guest"
+ rhel7_10035_win:
+  name: "[migration] Check live migration statistics - non page delta compression  -- Windows guest"
+ rhel7_10047_win:
+  name: "[migration] Ping-pong live migration with large vcpu and memory values of guest  -- Windows guest"
+ rhel7_10052_win:
+  name: "[migration] Measure the migration speed(max-bandwidth)  -- Windows guest"
  rhel7_10056_win:
   name: "[migration] Set migration speed(max-bandwidth) after migration begins  -- Windows guest"
  rhel7_10057_win:
