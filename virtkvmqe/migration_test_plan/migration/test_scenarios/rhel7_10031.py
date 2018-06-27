@@ -81,6 +81,7 @@ def run_case(params):
 
     test.sub_step_log('run fio with data disk')
     src_guest_session.guest_cmd_output('rm -rf /home/fio')
+    src_guest_session.guest_cmd_output('yum install -y libaio*')
     src_guest_session.guest_cmd_output('cd /home; '
                                        'git clone git://git.kernel.dk/fio.git')
     src_guest_session.guest_cmd_output('cd /home/fio; '
