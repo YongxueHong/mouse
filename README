@@ -55,6 +55,27 @@ c)The option "repeat_times" allows us to run loop or cases for some times
 --repeat_times=3
 
 III.Log
-Test log is put in mouse/test_logs, 'latest' is the last time test log, one log
+a)Test log is put in mouse/test_logs, 'latest' is the last time test log, one log
 direction is for one time test. For each log direction, there is four files:
 long_debug.log, paramiko.log, serial_debug.log and short_debug.log.
+
+b)you could upload test logs to nfs server(bos server or pek server) by the
+following method:
+# python import2nfs.py -s=rhel7_109999-2018-06-29-06:50:34 -d=/xianwang/test
+or
+# python import2nfs.py -s=latest -d=/xianwang/test
+or
+# python import2nfs.py -d=/xianwang/test
+or
+# python import2nfs.py
+Notice:
+s:the source log directory that you want to upload, you must give an valid value
+  which is in /test_logs, for example 'latest', the default value is "latest"
+d:the destination log directory that you want to upload to; if you don't assign
+  value to "-d", it will check whether "/home/job_env.txt" is none, the content
+  of this file will be the destination directory, the priority of the value of
+  "-d" is higher than "/home/job_env.txt"; it that file is none, it will use
+  "imported-logs" as destination directory.
+*:if you don't add "-d" and "/home/job_env.txt" is none, it will upload "latest"
+  to "imported-logs"
+
